@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NHS SQL Practice — Millbrook NHS Trust</title>
+  <style>
+    :root {
+      --nhs-blue: #005EB8;
+      --nhs-dark-blue: #003087;
+      --nhs-red: #d5281b;
+      --bg: #f0f4f5;
+      --surface: #ffffff;
+      --border: #d8dde0;
+      --text: #212b32;
+      --text-secondary: #4c6272;
+      --editor-bg: #1e1e1e;
+      --editor-text: #d4d4d4;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* ── Loading overlay ─────────────────────────────────── */
+    #loading-overlay {
+      position: fixed; inset: 0; background: white;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    #loading-overlay.hidden { display: none; }
+    #loading-spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border); border-top-color: var(--nhs-blue);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-message { margin-top: 16px; font-size: 15px; color: var(--text-secondary); }
+    #loading-progress {
+      width: 220px; height: 4px; background: var(--border);
+      border-radius: 2px; margin-top: 12px; overflow: hidden;
+    }
+    #loading-progress-bar {
+      width: 0%; height: 100%; background: var(--nhs-blue); transition: width 0.15s;
+    }
+
+    /* ── Header ──────────────────────────────────────────── */
+    #app-header {
+      height: 48px; background: var(--nhs-blue); color: white;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; flex-shrink: 0;
+    }
+    #app-header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+    #db-status { font-size: 13px; opacity: 0.85; }
+
+    /* ── Layout ──────────────────────────────────────────── */
+    #layout { display: flex; height: calc(100vh - 48px); }
+
+    #exercises-panel {
+      width: 42%; overflow-y: auto; background: var(--surface);
+      border-right: 1px solid var(--border); flex-shrink: 0;
+    }
+    #main-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+    /* ── Exercises content ────────────────────────────────── */
+    #browser-banner {
+      padding: 12px 24px; background: #e8edee; font-size: 13px;
+      color: var(--text-secondary); line-height: 1.5;
+      border-bottom: 1px solid var(--border);
+    }
+    #browser-banner strong { color: var(--text); }
+    #exercises-content { padding: 24px; line-height: 1.6; }
+    #exercises-content h1 { font-size: 22px; margin-bottom: 4px; }
+    #exercises-content h2 {
+      font-size: 17px; margin: 28px 0 12px;
+      padding-bottom: 6px; border-bottom: 2px solid var(--nhs-blue); color: var(--nhs-blue);
+    }
+    #exercises-content h3 { font-size: 15px; margin: 20px 0 8px; }
+    #exercises-content p { margin: 8px 0; font-size: 14.5px; }
+    #exercises-content ul, #exercises-content ol { margin: 8px 0 8px 24px; font-size: 14.5px; }
+    #exercises-content li { margin: 4px 0; }
+    #exercises-content a { color: var(--nhs-blue); }
+
+    #exercises-content pre {
+      background: #2d2d2d; color: #d4d4d4; padding: 12px 14px;
+      border-radius: 4px; overflow-x: auto; margin: 10px 0;
+      font-size: 13px; line-height: 1.5; position: relative;
+    }
+    #exercises-content pre:has(code.language-sql) { cursor: pointer; }
+    #exercises-content pre:has(code.language-sql):hover { outline: 2px solid var(--nhs-blue); }
+    #exercises-content pre:has(code.language-sql)::after {
+      content: 'click to load';
+      position: absolute; top: 6px; right: 8px;
+      font-size: 11px; color: #aaa; background: rgba(0,0,0,0.4);
+      padding: 1px 7px; border-radius: 3px;
+      opacity: 0; transition: opacity 0.15s; font-family: sans-serif;
+    }
+    #exercises-content pre:has(code.language-sql):hover::after { opacity: 1; }
+
+    #exercises-content code {
+      font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace; font-size: 13px;
+    }
+    #exercises-content :not(pre) > code {
+      background: #e8edee; padding: 1px 5px; border-radius: 3px; font-size: 12.5px;
+    }
+    #exercises-content table {
+      border-collapse: collapse; margin: 10px 0; font-size: 13px; width: auto;
+    }
+    #exercises-content th, #exercises-content td {
+      border: 1px solid var(--border); padding: 4px 10px; text-align: left;
+    }
+    #exercises-content th { background: var(--bg); font-weight: 600; }
+    #exercises-content details { margin: 10px 0; }
+    #exercises-content summary {
+      cursor: pointer; font-weight: 600; color: var(--nhs-blue); font-size: 14px;
+    }
+    #exercises-content summary:hover { text-decoration: underline; }
+    #exercises-content hr { margin: 28px 0; border: none; border-top: 1px solid var(--border); }
+    #exercises-content blockquote {
+      border-left: 3px solid var(--nhs-blue); padding-left: 14px;
+      margin: 10px 0; color: var(--text-secondary);
+    }
+
+    /* ── Editor ──────────────────────────────────────────── */
+    #editor-panel { display: flex; flex-direction: column; flex-shrink: 0; }
+    #editor-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 12px; background: #f8f9fa; border-bottom: 1px solid var(--border);
+    }
+    #editor-toolbar .actions { display: flex; align-items: center; gap: 8px; }
+    .shortcut-hint { font-size: 12px; color: var(--text-secondary); }
+
+    #sql-editor {
+      width: 100%; height: 200px;
+      font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
+      font-size: 14px; line-height: 1.5; padding: 12px 14px;
+      background: var(--editor-bg); color: var(--editor-text);
+      border: none; resize: vertical; outline: none; tab-size: 2;
+    }
+    #sql-editor::placeholder { color: #666; }
+
+    /* ── Buttons ─────────────────────────────────────────── */
+    button {
+      font-family: inherit; cursor: pointer; border: none; border-radius: 4px;
+      padding: 5px 14px; font-size: 13px; font-weight: 500;
+    }
+    #run-btn { background: var(--nhs-blue); color: white; }
+    #run-btn:hover:not(:disabled) { background: var(--nhs-dark-blue); }
+    #run-btn:disabled { opacity: 0.5; cursor: default; }
+    #reset-btn {
+      background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    #reset-btn:hover:not(:disabled) { background: var(--bg); }
+    #reset-btn:disabled { opacity: 0.5; cursor: default; }
+
+    /* ── Results ─────────────────────────────────────────── */
+    #results-panel { flex: 1; overflow: auto; min-height: 0; }
+    #results-meta {
+      padding: 7px 14px; font-size: 13px; color: var(--text-secondary);
+      background: #f8f9fa; border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+      min-height: 33px;
+    }
+    #results-scroll { overflow: auto; flex: 1; }
+
+    #results-content table {
+      width: 100%; border-collapse: collapse;
+      font-size: 13px; font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
+    }
+    #results-content th {
+      background: var(--bg); position: sticky; top: 0; z-index: 1;
+      border-bottom: 2px solid var(--border); font-weight: 600;
+    }
+    #results-content td, #results-content th {
+      padding: 5px 10px; text-align: left; border-bottom: 1px solid #eee;
+      white-space: nowrap; max-width: 400px; overflow: hidden; text-overflow: ellipsis;
+    }
+    #results-content tr:hover td { background: #f0f7ff; }
+    .null { color: #999; font-style: italic; }
+    .error-msg {
+      padding: 14px; background: #fde8e8; color: var(--nhs-red);
+      border-radius: 4px; margin: 14px;
+      font-family: 'Fira Code', Consolas, monospace; font-size: 13px;
+      white-space: pre-wrap; line-height: 1.5;
+    }
+    .placeholder-msg { padding: 20px 14px; color: var(--text-secondary); font-size: 14px; }
+
+    /* ── Responsive ──────────────────────────────────────── */
+    @media (max-width: 900px) {
+      #layout { flex-direction: column; }
+      #exercises-panel {
+        width: 100%; height: 40vh; border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      #main-panel { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div id="loading-spinner"></div>
+  <div id="loading-message">Initializing...</div>
+  <div id="loading-progress"><div id="loading-progress-bar"></div></div>
+</div>
+
+<header id="app-header">
+  <h1>NHS SQL Practice</h1>
+  <span id="db-status"></span>
+</header>
+
+<div id="layout">
+  <aside id="exercises-panel">
+    <div id="browser-banner">
+      <strong>Browser edition.</strong>
+      DuckDB is running in your browser — no install needed.
+      Click any SQL block in the exercises to load it into the editor.
+    </div>
+    <div id="exercises-content">
+      <p class="placeholder-msg">Loading exercises...</p>
+    </div>
+  </aside>
+
+  <div id="main-panel">
+    <div id="editor-panel">
+      <div id="editor-toolbar">
+        <div class="actions">
+          <button id="run-btn" disabled>Run</button>
+          <button id="reset-btn" disabled>Reset DB</button>
+        </div>
+        <span class="shortcut-hint" id="shortcut-hint"></span>
+      </div>
+      <textarea
+        id="sql-editor"
+        spellcheck="false"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        placeholder="-- Write SQL here"
+      ></textarea>
+    </div>
+    <div id="results-panel">
+      <div id="results-meta"></div>
+      <div id="results-scroll">
+        <div id="results-content">
+          <p class="placeholder-msg">Run a query to see results here.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<noscript>
+  <div style="padding:40px;text-align:center;font-family:sans-serif;">
+    <h2>JavaScript Required</h2>
+    <p>This SQL practice tool runs DuckDB in your browser and requires JavaScript.</p>
+  </div>
+</noscript>
+
+<script type="module">
+  import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm/+esm';
+  import { marked } from 'https://cdn.jsdelivr.net/npm/marked/+esm';
+
+  // ── DOM refs ───────────────────────────────────────────────
+  const $ = (id) => document.getElementById(id);
+  const loadingOverlay  = $('loading-overlay');
+  const loadingMessage  = $('loading-message');
+  const loadingBar      = $('loading-progress-bar');
+  const dbStatus        = $('db-status');
+  const exercisesEl     = $('exercises-content');
+  const editor          = $('sql-editor');
+  const runBtn          = $('run-btn');
+  const resetBtn        = $('reset-btn');
+  const resultsMeta     = $('results-meta');
+  const resultsContent  = $('results-content');
+
+  let db = null, conn = null;
+
+  const modKey = /Mac|iPhone|iPad/.test(navigator.platform) ? '\u2318' : 'Ctrl';
+  $('shortcut-hint').textContent = `${modKey}+Enter to run \u00b7 Tab indents`;
+
+  // ── Initialization ─────────────────────────────────────────
+  async function init() {
+    try {
+      if (location.protocol === 'file:') {
+        throw new Error('Cannot load data from file://. Serve this folder with a local server:\n  python -m http.server\nThen open http://localhost:8000');
+      }
+
+      // 1. Boot DuckDB-WASM
+      loadingMessage.textContent = 'Loading DuckDB engine\u2026';
+      const bundles = duckdb.getJsDelivrBundles();
+      const bundle = await duckdb.selectBundle(bundles);
+      const workerUrl = URL.createObjectURL(
+        new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+      );
+      const worker = new Worker(workerUrl);
+      db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker);
+      await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+      URL.revokeObjectURL(workerUrl);
+      conn = await db.connect();
+
+      // 2. Fetch build script + exercises in parallel
+      loadingMessage.textContent = 'Fetching schema\u2026';
+      const [buildSql] = await Promise.all([
+        fetch('./build_db.sql').then(r => { if (!r.ok) throw new Error('Failed to load build_db.sql'); return r.text(); }),
+        loadExercises(),
+      ]);
+
+      // 3. Extract CSV paths from build_db.sql
+      const csvPaths = [...new Set(
+        [...buildSql.matchAll(/read_csv\w*\(\s*'([^']+)'/g)].map(m => m[1])
+      )];
+
+      // 4. Fetch and register all CSVs
+      let loaded = 0;
+      const total = csvPaths.length;
+      loadingMessage.textContent = `Loading data (0/${total})\u2026`;
+
+      await Promise.all(csvPaths.map(async (path) => {
+        const resp = await fetch('./' + path);
+        if (!resp.ok) throw new Error(`Failed to fetch ${path}`);
+        await db.registerFileText(path, await resp.text());
+        loaded++;
+        loadingMessage.textContent = `Loading data (${loaded}/${total})\u2026`;
+        loadingBar.style.width = `${(loaded / total) * 100}%`;
+      }));
+
+      // 5. Execute CREATE TABLE statements
+      loadingMessage.textContent = 'Creating tables\u2026';
+      const statements = buildSql
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s && !s.split('\n').every(l => !l.trim() || l.trim().startsWith('--')));
+      for (const stmt of statements) {
+        await conn.query(stmt);
+      }
+
+      // 6. Ready
+      loadingOverlay.classList.add('hidden');
+      dbStatus.textContent = `${total} tables loaded`;
+      runBtn.disabled = false;
+      resetBtn.disabled = false;
+      editor.value = 'SHOW TABLES;';
+      editor.focus();
+      editor.setSelectionRange(0, editor.value.length);
+
+    } catch (err) {
+      loadingMessage.textContent = err.message;
+      loadingMessage.style.color = 'var(--nhs-red)';
+      loadingMessage.style.whiteSpace = 'pre-wrap';
+      loadingMessage.style.maxWidth = '500px';
+      loadingMessage.style.textAlign = 'center';
+      console.error('Init failed:', err);
+    }
+  }
+
+  async function loadExercises() {
+    try {
+      const resp = await fetch('./exercises.md');
+      if (!resp.ok) throw new Error();
+      exercisesEl.innerHTML = marked.parse(await resp.text());
+    } catch {
+      exercisesEl.innerHTML =
+        '<p class="placeholder-msg">Could not load exercises. <a href="exercises.md">View exercises.md directly</a>.</p>';
+    }
+  }
+
+  // ── Query Execution ────────────────────────────────────────
+  const MAX_ROWS = 500;
+  const TIMEOUT_MS = 10_000;
+
+  async function runQuery() {
+    const sql = editor.value.trim();
+    if (!sql || !conn) return;
+
+    runBtn.disabled = true;
+    resultsMeta.textContent = 'Running\u2026';
+    resultsContent.innerHTML = '';
+
+    const t0 = performance.now();
+    try {
+      const stmts = sql.split(';').map(s => s.trim()).filter(Boolean);
+      let result = null;
+      for (const stmt of stmts) {
+        const timeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(
+            'Query timed out (10 second limit). Try adding a LIMIT clause or simplifying.'
+          )), TIMEOUT_MS)
+        );
+        result = await Promise.race([conn.query(stmt), timeout]);
+      }
+      renderResults(result, elapsed(t0));
+    } catch (err) {
+      resultsMeta.textContent = `Error \u00b7 ${elapsed(t0)}`;
+      resultsContent.innerHTML = `<div class="error-msg">${esc(err.message)}</div>`;
+    } finally {
+      runBtn.disabled = false;
+    }
+  }
+
+  function elapsed(t0) { return ((performance.now() - t0) / 1000).toFixed(2) + 's'; }
+
+  // ── Render Results ─────────────────────────────────────────
+  function renderResults(table, time) {
+    if (!table || table.numRows === 0) {
+      const ncols = table ? table.schema.fields.length : 0;
+      resultsMeta.textContent = `0 rows \u00b7 ${ncols} columns \u00b7 ${time}`;
+      resultsContent.innerHTML = '<p class="placeholder-msg">Query returned no rows.</p>';
+      return;
+    }
+
+    const cols = table.schema.fields.map(f => f.name);
+    const total = table.numRows;
+    const limit = Math.min(total, MAX_ROWS);
+    const rows = table.toArray();
+
+    let html = '<table><thead><tr>';
+    for (const c of cols) html += `<th>${esc(c)}</th>`;
+    html += '</tr></thead><tbody>';
+
+    for (let i = 0; i < limit; i++) {
+      html += '<tr>';
+      for (const c of cols) html += `<td>${fmtVal(rows[i][c])}</td>`;
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+
+    const trunc = total > MAX_ROWS ? ` (showing first ${MAX_ROWS})` : '';
+    resultsMeta.textContent = `${total} rows \u00b7 ${cols.length} columns \u00b7 ${time}${trunc}`;
+    resultsContent.innerHTML = html;
+  }
+
+  function fmtVal(v) {
+    if (v === null || v === undefined) return '<span class="null">NULL</span>';
+    if (typeof v === 'bigint') return esc(Number(v).toString());
+    if (v instanceof Date) return esc(v.toISOString().replace('T', ' ').replace(/\.000Z$/, ''));
+    return esc(String(v));
+  }
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // ── Reset ──────────────────────────────────────────────────
+  async function resetDB() {
+    runBtn.disabled = true;
+    resetBtn.disabled = true;
+    resultsContent.innerHTML = '';
+    resultsMeta.textContent = '';
+    if (conn) { try { await conn.close(); } catch {} }
+    if (db) { try { await db.terminate(); } catch {} }
+    db = null; conn = null;
+    loadingBar.style.width = '0%';
+    loadingOverlay.classList.remove('hidden');
+    await init();
+  }
+
+  // ── Event Handlers ─────────────────────────────────────────
+  runBtn.addEventListener('click', runQuery);
+  resetBtn.addEventListener('click', resetDB);
+
+  editor.addEventListener('keydown', (e) => {
+    // Run query
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      runQuery();
+      return;
+    }
+    // Tab inserts two spaces
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const pos = editor.selectionStart;
+      editor.value = editor.value.substring(0, pos) + '  ' + editor.value.substring(editor.selectionEnd);
+      editor.selectionStart = editor.selectionEnd = pos + 2;
+    }
+  });
+
+  // Click SQL code blocks in exercises to load into editor
+  exercisesEl.addEventListener('click', (e) => {
+    const pre = e.target.closest('#exercises-content pre');
+    if (!pre) return;
+    const code = pre.querySelector('code');
+    if (!code) return;
+    const text = code.textContent;
+    if (/^\s*(SELECT|WITH|CREATE|INSERT|UPDATE|DELETE|SHOW|DESCRIBE|DROP|ALTER)\b/i.test(text)) {
+      editor.value = text;
+      editor.focus();
+      editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+
+  // ── Start ──────────────────────────────────────────────────
+  init();
+</script>
+</body>
+</html>

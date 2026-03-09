@@ -1,0 +1,6 @@
+id,theatre_name,specialty,sessions_per_day,valid_from,valid_to
+THTR_001,Main Theatre 1,General Surgery,3,2023-01-01 00:00:00,
+THTR_002,Main Theatre 2,Trauma & Orthopaedics,3,2023-01-01 00:00:00,
+THTR_003,Cardiac Theatre,Cardiology / Cardiac Surgery,2,2023-01-01 00:00:00,
+THTR_004,Day Surgery Theatre,General / Mixed,4,2023-01-01 00:00:00,
+THTR_005,Obstetric Theatre,Obstetrics,2,2023-01-01 00:00:00,

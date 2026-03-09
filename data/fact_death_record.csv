@@ -1,0 +1,10 @@
+decision_id,timestamp,actor_type,actor_id,entity_type,entity_id,event_sequence,journey_type,journey_instance_id,journey_state
+11850,2023-04-28 16:30:58.322545,patient,PAT_0000042,consultant,CON_006,12763,inpatient_spell,inst_01965,deceased
+60361,2024-04-05 20:01:16.648762,patient,PAT_0002129,consultant,CON_024,63329,inpatient_spell,inst_08205,deceased
+125810,2025-03-31 21:11:57.436519,patient,PAT_0003638,consultant,CON_022,131468,inpatient_spell,inst_16790,deceased
+128706,2025-04-14 04:13:34.389424,patient,PAT_0003891,consultant,CON_024,134461,inpatient_spell,inst_17095,deceased
+146680,2025-07-14 13:03:34.401615,patient,PAT_0003722,consultant,CON_013,153031,inpatient_spell,inst_19339,deceased
+147588,2025-07-17 04:54:55.580142,patient,PAT_0004570,consultant,CON_002,153973,inpatient_spell,inst_19370,deceased
+155434,2025-08-30 06:32:12.831698,patient,PAT_0004772,consultant,CON_001,162109,inpatient_spell,inst_20416,deceased
+158218,2025-09-15 18:15:06.250737,patient,PAT_0004860,consultant,CON_004,165019,inpatient_spell,inst_20807,deceased
+174005,2025-12-14 13:46:07.433198,patient,PAT_0005272,consultant,CON_024,181372,inpatient_spell,inst_22813,deceased

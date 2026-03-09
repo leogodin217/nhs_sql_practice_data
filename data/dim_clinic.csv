@@ -1,0 +1,7 @@
+id,clinic_name,specialty,clinic_type,valid_from,valid_to
+CLIN_001,Medical Outpatient Clinic,General Medicine (300),new,2024-01-01 00:00:00,
+CLIN_002,Medical Follow-Up Clinic,General Medicine (300),follow_up,2024-01-01 00:00:00,
+CLIN_003,Surgical Outpatient Clinic,General Surgery (100),new,2024-01-01 00:00:00,
+CLIN_004,Cardiology Clinic,Cardiology (320),new,2024-01-01 00:00:00,
+CLIN_005,Respiratory Clinic,Respiratory Medicine (340),follow_up,2024-01-01 00:00:00,
+CLIN_006,Orthopaedic Clinic,Trauma & Orthopaedics (110),new,2024-01-01 00:00:00,

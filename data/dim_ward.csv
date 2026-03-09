@@ -1,0 +1,11 @@
+id,ward_name,ward_type,department,site_code,total_beds,cost_per_bed_day,valid_from,valid_to
+WARD_001,Nightingale Ward,general,medicine,RXH01,10,350.0,2023-01-01 00:00:00,
+WARD_002,Lister Ward,general,medicine,RXH01,10,350.0,2023-01-01 00:00:00,
+WARD_003,Fleming Ward,general,medicine,RXH01,9,380.0,2023-01-01 00:00:00,
+WARD_004,Jenner Ward,general,surgery,RXH01,8,420.0,2023-01-01 00:00:00,
+WARD_005,Critical Care Unit,icu_hdu,critical_care,RXH01,4,1800.0,2023-01-01 00:00:00,
+WARD_006,High Dependency Unit,icu_hdu,critical_care,RXH01,3,950.0,2023-01-01 00:00:00,
+WARD_007,Cavell Ward,step_down,medicine,RXH02,7,280.0,2023-01-01 00:00:00,
+WARD_008,Midwifery Unit,maternity,women_children,RXH02,7,450.0,2023-01-01 00:00:00,
+WARD_009,Rainbow Ward,paediatric,women_children,RXH02,6,420.0,2023-01-01 00:00:00,
+WARD_010,Acute Medical Unit (AMU),assessment,medicine,RXH01,11,400.0,2023-01-01 00:00:00,

@@ -1,0 +1,13 @@
+id,test_name,test_type,cost,turnaround_days,valid_from,valid_to
+DIAG_001,MRI Scan,mri,350.0,5,2023-01-01 00:00:00,
+DIAG_002,CT Scan,ct,250.0,3,2023-01-01 00:00:00,
+DIAG_003,X-Ray,xray,35.0,0,2023-01-01 00:00:00,
+DIAG_004,Ultrasound,ultrasound,80.0,2,2023-01-01 00:00:00,
+DIAG_005,Full Blood Count,blood,12.0,0,2023-01-01 00:00:00,
+DIAG_006,Comprehensive Metabolic Panel,blood,18.0,0,2023-01-01 00:00:00,
+DIAG_007,Histopathology,pathology,150.0,10,2023-01-01 00:00:00,
+DIAG_008,ECG,other,25.0,0,2023-01-01 00:00:00,
+DIAG_009,Echocardiogram,other,180.0,3,2023-01-01 00:00:00,
+DIAG_010,Upper GI Endoscopy,endoscopy,700.0,1,2023-01-01 00:00:00,
+DIAG_011,Spirometry,other,60.0,0,2023-01-01 00:00:00,
+DIAG_012,Troponin Assay,blood,15.0,0,2023-01-01 00:00:00,
