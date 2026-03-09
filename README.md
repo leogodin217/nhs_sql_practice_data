@@ -10,6 +10,10 @@ These exercises use deliberately vague, real-world questions -- the kind a Medic
 
 ## Setup
 
+### Run in Your Broswer (Easiest)
+
+Go [here](https://leogodin217.github.io/nhs_sql_practice_data/)
+
 ### DuckDB with DBeaver (Recommended)
 
 **Requires:** [DuckDB CLI](https://duckdb.org/docs/installation/)
