@@ -132,17 +132,13 @@ SELECT theatre_name, specialty, sessions_per_day
 FROM dim_theatre;
 ```
 
-**Orphan check -- does dim_clinic appear in any fact table?**
+**Quick inventory -- which dimension tables exist?**
 
 ```sql
-SELECT DISTINCT entity_type
-FROM fact_admission
-UNION
-SELECT DISTINCT entity_type FROM fact_ed_arrival
-UNION
-SELECT DISTINCT entity_type FROM fact_surgery_performed
-UNION
-SELECT DISTINCT entity_type FROM fact_appointment_attended;
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'main' AND table_name LIKE 'dim_%'
+ORDER BY table_name;
 ```
 
 </details>
@@ -150,9 +146,9 @@ SELECT DISTINCT entity_type FROM fact_appointment_attended;
 <details>
 <summary>Discussion</summary>
 
-The trust has 10 wards (75 beds total), 25 consultants (5 per specialty group, 3 grades each), 5 operating theatres, 12 diagnostic test types, 35 surgical procedures, 30 medications, and 6 outpatient clinics.
+The trust has 10 wards (75 beds total), 25 consultants (5 per specialty group, 3 grades each), 5 operating theatres, 12 diagnostic test types, 35 surgical procedures, and 30 medications.
 
-But `dim_clinic` is an orphan -- no fact table references it via `entity_type = 'clinic'`. It exists in the schema but isn't linked to any events. This is a real-world situation: tables that exist but aren't actually populated or connected. Good analysts notice these things early.
+Notice how each dimension table maps to a specific foreign key in the fact tables -- `consultant_id` references `dim_consultant`, `ward_id` references `dim_ward`, and so on. Understanding which dimension connects to which facts is the first step to writing useful queries.
 
 </details>
 
@@ -287,7 +283,7 @@ The Chief Operating Officer needs to know: what percentage of A&E patients are s
 <details>
 <summary>Solution</summary>
 
-**Join arrival to assessment on journey_instance_id:**
+**Join arrival to assessment on attendance_id:**
 
 ```sql
 SELECT
@@ -299,7 +295,7 @@ SELECT
         THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_within_4h
 FROM fact_ed_arrival arr
 JOIN fact_ed_assessment ea
-    ON arr.journey_instance_id = ea.journey_instance_id;
+    ON arr.attendance_id = ea.attendance_id;
 ```
 
 </details>
@@ -341,13 +337,13 @@ The bed management team wants to know the average length of stay for inpatients.
 ```sql
 WITH spells AS (
     SELECT
-        a.journey_instance_id,
+        a.spell_id,
         MIN(a.timestamp) AS admission_ts,
         MIN(d.timestamp) AS discharge_ts
     FROM fact_admission a
     JOIN fact_discharge d
-        ON a.journey_instance_id = d.journey_instance_id
-    GROUP BY a.journey_instance_id
+        ON a.spell_id = d.spell_id
+    GROUP BY a.spell_id
 )
 SELECT
     COUNT(*) AS completed_spells,
@@ -363,21 +359,21 @@ FROM spells;
 ```sql
 WITH spells AS (
     SELECT
-        a.journey_instance_id,
-        a.actor_id,
+        a.spell_id,
+        a.patient_id,
         MIN(a.timestamp) AS admission_ts,
         MIN(d.timestamp) AS discharge_ts
     FROM fact_admission a
     JOIN fact_discharge d
-        ON a.journey_instance_id = d.journey_instance_id
-    GROUP BY a.journey_instance_id, a.actor_id
+        ON a.spell_id = d.spell_id
+    GROUP BY a.spell_id, a.patient_id
 )
 SELECT
     p.primary_condition,
     COUNT(*) AS spells,
     ROUND(AVG(EXTRACT(EPOCH FROM (s.discharge_ts - s.admission_ts)) / 86400.0), 1) AS mean_los
 FROM spells s
-JOIN dim_patient p ON s.actor_id = p.id AND p.valid_to IS NULL
+JOIN dim_patient p ON s.patient_id = p.id AND p.valid_to IS NULL
 GROUP BY p.primary_condition
 ORDER BY mean_los DESC;
 ```
@@ -387,9 +383,9 @@ ORDER BY mean_los DESC;
 <details>
 <summary>Discussion</summary>
 
-Check against the NHS benchmark of 4-5 days. The `MIN()` aggregation is important here: some journey instances have multiple admission records (when a patient is transferred between consultant episodes within the same spell), so we need the earliest admission timestamp.
+Check against the NHS benchmark of 4-5 days. The `MIN()` aggregation is important here: some spells have multiple admission records (when a patient is transferred between consultant episodes within the same spell), so we need the earliest admission timestamp.
 
-Compare completed spells to total admission journeys -- you'll see a significant gap. The difference represents "open" spells still in progress when the dataset ends. This is normal for a point-in-time snapshot -- you can only measure ALOS on completed spells.
+Compare completed spells to total admission `spell_id` values -- you'll see a significant gap. The difference represents "open" spells still in progress when the dataset ends. This is normal for a point-in-time snapshot -- you can only measure ALOS on completed spells.
 
 Try segmenting by primary condition. Is there a meaningful difference between cardiac and orthopaedic patients? What about by comorbidity count?
 
@@ -405,7 +401,7 @@ The outpatient services manager is worried about the gap between referrals and a
 <summary>Hints</summary>
 
 - What fact tables track the outpatient journey?
-- `journey_instance_id` links events from the same pathway. How many distinct journeys appear in each table?
+- `pathway_id` links events from the same pathway. How many distinct pathways appear in each table?
 - What could explain the gap between referral count and attendance count?
 - Recent referrals haven't had time to convert. How might this skew the funnel?
 
@@ -419,14 +415,14 @@ The outpatient services manager is worried about the gap between referrals and a
 ```sql
 SELECT
     'referrals' AS stage,
-    COUNT(DISTINCT journey_instance_id) AS journey_instances
+    COUNT(DISTINCT pathway_id) AS pathways
 FROM fact_referral_created
 UNION ALL
 SELECT
     'attended',
-    COUNT(DISTINCT journey_instance_id)
+    COUNT(DISTINCT pathway_id)
 FROM fact_appointment_attended
-ORDER BY journey_instances DESC;
+ORDER BY pathways DESC;
 ```
 
 **Referral volume by month:**
@@ -434,7 +430,7 @@ ORDER BY journey_instances DESC;
 ```sql
 SELECT
     DATE_TRUNC('month', timestamp)::DATE AS month,
-    COUNT(DISTINCT journey_instance_id) AS referrals
+    COUNT(DISTINCT pathway_id) AS referrals
 FROM fact_referral_created
 GROUP BY month
 ORDER BY month;
@@ -445,7 +441,7 @@ ORDER BY month;
 <details>
 <summary>Discussion</summary>
 
-You should see a significant gap between referral journeys and attended journeys. But this doesn't mean all those patients DNA'd. The gap includes:
+You should see a significant gap between referral pathways and attended pathways. But this doesn't mean all those patients DNA'd. The gap includes:
 
 - Patients still waiting for their appointment (not yet attended)
 - Cancelled appointments (by patient or hospital)
@@ -527,7 +523,7 @@ The Clinical Director wants to understand workload distribution across the medic
 <details>
 <summary>Hints</summary>
 
-- Multiple fact tables reference consultants via `entity_type = 'consultant'` and `entity_id`.
+- Multiple fact tables reference consultants via `consultant_id`.
 - Which events are the most meaningful for measuring workload -- admissions? surgeries? all events?
 - Join to `dim_consultant` to get specialty and grade.
 - Is total workload or recent workload more relevant for staffing?
@@ -546,7 +542,7 @@ SELECT
     c.grade,
     COUNT(*) AS admissions
 FROM fact_admission a
-JOIN dim_consultant c ON a.entity_id = c.id
+JOIN dim_consultant c ON a.consultant_id = c.id
 GROUP BY c.id, c.specialty_group, c.grade
 ORDER BY admissions DESC;
 ```
@@ -557,9 +553,9 @@ ORDER BY admissions DESC;
 SELECT
     c.specialty_group,
     COUNT(*) AS total_admissions,
-    COUNT(DISTINCT a.actor_id) AS unique_patients
+    COUNT(DISTINCT a.patient_id) AS unique_patients
 FROM fact_admission a
-JOIN dim_consultant c ON a.entity_id = c.id
+JOIN dim_consultant c ON a.consultant_id = c.id
 GROUP BY c.specialty_group
 ORDER BY total_admissions DESC;
 ```
@@ -589,7 +585,7 @@ Finance wants a breakdown of surgical procedure costs by complexity.
 <summary>Hints</summary>
 
 - `dim_procedure` has tariff and complexity columns.
-- `fact_pre_op_assessment` links to procedures via `entity_id`.
+- `fact_pre_op_assessment` links to procedures via `procedure_id`.
 - HRG (Healthcare Resource Group) codes determine NHS payment. How do tariffs vary by complexity?
 
 </details>
@@ -621,7 +617,7 @@ SELECT
     proc.specialty_group,
     COUNT(*) AS times_performed
 FROM fact_pre_op_assessment f
-JOIN dim_procedure proc ON f.entity_id = proc.id
+JOIN dim_procedure proc ON f.procedure_id = proc.id
 GROUP BY proc.procedure_name, proc.complexity, proc.tariff, proc.specialty_group
 ORDER BY proc.tariff DESC
 LIMIT 10;
@@ -648,8 +644,8 @@ The Cancer Services lead needs to report on the 28-day Faster Diagnosis Standard
 <summary>Hints</summary>
 
 - What tables capture the cancer pathway?
-- `journey_instance_id` links a referral to its first-seen appointment.
-- Cancer journeys can have multiple referral events per instance. How should you handle that?
+- `cancer_pathway_id` links a referral to its first-seen appointment.
+- Cancer journeys can have multiple referral events per pathway. How should you handle that?
 - Compute the gap in days between first referral and first appointment.
 - NHS reports cancer performance quarterly. What time period should you use?
 
@@ -663,16 +659,16 @@ The Cancer Services lead needs to report on the 28-day Faster Diagnosis Standard
 ```sql
 WITH cancer_times AS (
     SELECT
-        cr.journey_instance_id,
+        cr.cancer_pathway_id,
         MIN(cr.timestamp) AS referral_ts,
         MIN(fs.timestamp) AS first_seen_ts
     FROM fact_cancer_referral cr
     JOIN fact_cancer_first_seen fs
-        ON cr.journey_instance_id = fs.journey_instance_id
-    GROUP BY cr.journey_instance_id
+        ON cr.cancer_pathway_id = fs.cancer_pathway_id
+    GROUP BY cr.cancer_pathway_id
 )
 SELECT
-    COUNT(*) AS journeys_seen,
+    COUNT(*) AS pathways_seen,
     ROUND(AVG(EXTRACT(EPOCH FROM (first_seen_ts - referral_ts)) / 86400.0), 0) AS avg_days,
     SUM(CASE WHEN EXTRACT(EPOCH FROM (first_seen_ts - referral_ts)) / 86400.0 <= 28
         THEN 1 ELSE 0 END) AS within_28d,
@@ -688,7 +684,7 @@ FROM cancer_times;
 
 Compare your FDS percentage to the 75% national target. Is the trust hitting it?
 
-The `MIN()` aggregation is crucial here. Cancer journeys can have many referral and first-seen events per journey instance (some have 100+ rows in `fact_cancer_referral` due to pathway re-entry). Without aggregating to the journey level first, you'd get a massive cartesian product.
+The `MIN()` aggregation is crucial here. Cancer journeys can have many referral and first-seen events per cancer pathway (some have 100+ rows in `fact_cancer_referral` due to pathway re-entry). Without aggregating to the pathway level first, you'd get a massive cartesian product.
 
 Try breaking down by quarter across all years to see the trend. Also try joining to `dim_patient` to check whether certain conditions or demographics correlate with longer waits.
 
@@ -704,7 +700,7 @@ The Diagnostics lead wants to know: are we hitting the 6-week diagnostic wait ta
 <summary>Hints</summary>
 
 - `fact_diagnostic_ordered` and `fact_diagnostic_performed` capture the two key events.
-- Same `journey_instance_id` links an order to its completion.
+- Same `request_id` links an order to its completion.
 - Not all ordered tests get performed. What percentage complete?
 - Join to `dim_diagnostic` to break down by test type.
 - NHS reports diagnostics monthly. Should you measure the entire dataset or a recent window?
@@ -719,13 +715,13 @@ The Diagnostics lead wants to know: are we hitting the 6-week diagnostic wait ta
 ```sql
 WITH diag_times AS (
     SELECT
-        do2.journey_instance_id,
+        do2.request_id,
         MIN(do2.timestamp) AS ordered_ts,
         MIN(dp.timestamp) AS performed_ts
     FROM fact_diagnostic_ordered do2
     JOIN fact_diagnostic_performed dp
-        ON do2.journey_instance_id = dp.journey_instance_id
-    GROUP BY do2.journey_instance_id
+        ON do2.request_id = dp.request_id
+    GROUP BY do2.request_id
 )
 SELECT
     COUNT(*) AS tests_completed,
@@ -742,21 +738,21 @@ FROM diag_times;
 ```sql
 WITH diag_times AS (
     SELECT
-        do2.journey_instance_id,
-        do2.entity_id,
+        do2.request_id,
+        do2.diagnostic_id,
         MIN(do2.timestamp) AS ordered_ts,
         MIN(dp.timestamp) AS performed_ts
     FROM fact_diagnostic_ordered do2
     JOIN fact_diagnostic_performed dp
-        ON do2.journey_instance_id = dp.journey_instance_id
-    GROUP BY do2.journey_instance_id, do2.entity_id
+        ON do2.request_id = dp.request_id
+    GROUP BY do2.request_id, do2.diagnostic_id
 )
 SELECT
     d.test_type,
     COUNT(*) AS completed,
     ROUND(AVG(EXTRACT(EPOCH FROM (dt.performed_ts - dt.ordered_ts)) / 86400.0), 0) AS avg_days
 FROM diag_times dt
-JOIN dim_diagnostic d ON dt.entity_id = d.id
+JOIN dim_diagnostic d ON dt.diagnostic_id = d.id
 GROUP BY d.test_type
 ORDER BY avg_days DESC;
 ```
@@ -786,7 +782,7 @@ The Emergency Medicine consultant wants to understand: when an A&E patient gets 
 <summary>Hints</summary>
 
 - There's no foreign key linking ED attendance to inpatient spells. How do real analysts link these?
-- Same patient (`actor_id`), close in time. An ED attendance followed by an admission within hours.
+- Same patient (`patient_id`), close in time. An ED attendance followed by an admission within hours.
 - Compare ALOS for ED-origin admissions vs all admissions.
 
 </details>
@@ -798,18 +794,18 @@ The Emergency Medicine consultant wants to understand: when an A&E patient gets 
 
 ```sql
 WITH ed_patients AS (
-    SELECT actor_id, journey_instance_id AS ed_instance, timestamp AS ed_arrival_ts
+    SELECT patient_id, attendance_id AS ed_instance, timestamp AS ed_arrival_ts
     FROM fact_ed_arrival
 ),
 ip_spells AS (
     SELECT
-        a.actor_id,
-        a.journey_instance_id AS ip_instance,
+        a.patient_id,
+        a.spell_id AS ip_instance,
         MIN(a.timestamp) AS admit_ts,
         MIN(d.timestamp) AS discharge_ts
     FROM fact_admission a
-    JOIN fact_discharge d ON a.journey_instance_id = d.journey_instance_id
-    GROUP BY a.actor_id, a.journey_instance_id
+    JOIN fact_discharge d ON a.spell_id = d.spell_id
+    GROUP BY a.patient_id, a.spell_id
 )
 SELECT
     COUNT(*) AS ed_admitted_spells,
@@ -817,7 +813,7 @@ SELECT
     (SELECT ROUND(AVG(EXTRACT(EPOCH FROM (discharge_ts - admit_ts)) / 86400.0), 1) FROM ip_spells) AS overall_alos
 FROM ed_patients e
 JOIN ip_spells ip
-    ON e.actor_id = ip.actor_id
+    ON e.patient_id = ip.patient_id
     AND ip.admit_ts BETWEEN e.ed_arrival_ts AND e.ed_arrival_ts + INTERVAL '24 hours';
 ```
 
@@ -845,7 +841,7 @@ The Quality Improvement team wants to know the 30-day readmission rate. NHS benc
 
 - A readmission is a new admission for the same patient within 30 days of a prior discharge.
 - You need completed spells (admission + discharge) to measure this.
-- Link sequential spells for the same `actor_id` and check the time gap.
+- Link sequential spells for the same `patient_id` and check the time gap.
 - Readmission rates can vary over time. Is the latest year more operationally relevant?
 
 </details>
@@ -858,22 +854,22 @@ The Quality Improvement team wants to know the 30-day readmission rate. NHS benc
 ```sql
 WITH spells AS (
     SELECT
-        a.actor_id,
-        a.journey_instance_id,
+        a.patient_id,
+        a.spell_id,
         MIN(a.timestamp) AS admit_ts,
         MIN(d.timestamp) AS discharge_ts
     FROM fact_admission a
-    JOIN fact_discharge d ON a.journey_instance_id = d.journey_instance_id
-    GROUP BY a.actor_id, a.journey_instance_id
+    JOIN fact_discharge d ON a.spell_id = d.spell_id
+    GROUP BY a.patient_id, a.spell_id
 )
 SELECT
-    COUNT(DISTINCT s2.journey_instance_id) AS readmissions,
+    COUNT(DISTINCT s2.spell_id) AS readmissions,
     (SELECT COUNT(*) FROM spells) AS total_completed_spells,
-    ROUND(100.0 * COUNT(DISTINCT s2.journey_instance_id)
+    ROUND(100.0 * COUNT(DISTINCT s2.spell_id)
         / (SELECT COUNT(*) FROM spells), 1) AS readmission_pct
 FROM spells s1
 JOIN spells s2
-    ON s1.actor_id = s2.actor_id
+    ON s1.patient_id = s2.patient_id
     AND s2.admit_ts > s1.discharge_ts
     AND EXTRACT(EPOCH FROM (s2.admit_ts - s1.discharge_ts)) / 86400.0 <= 30;
 ```
@@ -885,7 +881,7 @@ JOIN spells s2
 
 Compare to the NHS benchmark of 12-14%. Is the trust within range?
 
-This query self-joins the spells CTE to find patients where a second admission occurs within 30 days of a prior discharge. The `DISTINCT` on `s2.journey_instance_id` is important because a single readmission spell could match multiple prior discharges.
+This query self-joins the spells CTE to find patients where a second admission occurs within 30 days of a prior discharge. The `DISTINCT` on `s2.spell_id` is important because a single readmission spell could match multiple prior discharges.
 
 Compare by year. Also consider right-censoring near the end of the dataset -- patients discharged in the final month haven't had a full 30-day window to be readmitted, which artificially lowers the rate.
 
@@ -902,8 +898,8 @@ Finance wants to understand the highest-cost patient journeys. Consider procedur
 <details>
 <summary>Hints</summary>
 
-- `dim_procedure.tariff` gives procedure costs. Link via `fact_pre_op_assessment.entity_id`.
-- `dim_ward.cost_per_bed_day` gives bed costs. Link via `fact_ward_assignment.entity_id`.
+- `dim_procedure.tariff` gives procedure costs. Link via `fact_pre_op_assessment.procedure_id`.
+- `dim_ward.cost_per_bed_day` gives bed costs. Link via `fact_ward_assignment.ward_id`.
 - LOS gives you the number of bed-days for completed spells.
 - Can you combine these for a total cost per patient?
 
@@ -916,14 +912,14 @@ Finance wants to understand the highest-cost patient journeys. Consider procedur
 
 ```sql
 SELECT
-    f.actor_id,
+    f.patient_id,
     p.primary_condition,
     SUM(proc.tariff) AS total_procedure_cost,
     COUNT(*) AS procedures_performed
 FROM fact_pre_op_assessment f
-JOIN dim_procedure proc ON f.entity_id = proc.id
-JOIN dim_patient p ON f.actor_id = p.id AND p.valid_to IS NULL
-GROUP BY f.actor_id, p.primary_condition
+JOIN dim_procedure proc ON f.procedure_id = proc.id
+JOIN dim_patient p ON f.patient_id = p.id AND p.valid_to IS NULL
+GROUP BY f.patient_id, p.primary_condition
 ORDER BY total_procedure_cost DESC
 LIMIT 15;
 ```
@@ -933,30 +929,30 @@ LIMIT 15;
 ```sql
 WITH spell_los AS (
     SELECT
-        a.actor_id,
-        a.journey_instance_id,
+        a.patient_id,
+        a.spell_id,
         MIN(a.timestamp) AS admit_ts,
         MIN(d.timestamp) AS discharge_ts,
         EXTRACT(EPOCH FROM (MIN(d.timestamp) - MIN(a.timestamp))) / 86400.0 AS los_days
     FROM fact_admission a
-    JOIN fact_discharge d ON a.journey_instance_id = d.journey_instance_id
-    GROUP BY a.actor_id, a.journey_instance_id
+    JOIN fact_discharge d ON a.spell_id = d.spell_id
+    GROUP BY a.patient_id, a.spell_id
 ),
 ward_costs AS (
     SELECT
-        wa.journey_instance_id,
+        wa.spell_id,
         AVG(w.cost_per_bed_day) AS avg_bed_cost
     FROM fact_ward_assignment wa
-    JOIN dim_ward w ON wa.entity_id = w.id
-    GROUP BY wa.journey_instance_id
+    JOIN dim_ward w ON wa.ward_id = w.id
+    GROUP BY wa.spell_id
 )
 SELECT
-    sl.actor_id,
+    sl.patient_id,
     ROUND(sl.los_days, 1) AS los_days,
     ROUND(wc.avg_bed_cost, 0) AS avg_bed_cost_per_day,
     ROUND(sl.los_days * wc.avg_bed_cost, 0) AS total_bed_cost
 FROM spell_los sl
-JOIN ward_costs wc ON sl.journey_instance_id = wc.journey_instance_id
+JOIN ward_costs wc ON sl.spell_id = wc.spell_id
 ORDER BY total_bed_cost DESC
 LIMIT 15;
 ```
@@ -998,20 +994,20 @@ The Health Inequalities lead wants to know: is there a relationship between depr
 ```sql
 WITH spells AS (
     SELECT
-        a.actor_id,
-        a.journey_instance_id,
+        a.patient_id,
+        a.spell_id,
         MIN(a.timestamp) AS admit_ts,
         MIN(d.timestamp) AS discharge_ts
     FROM fact_admission a
-    JOIN fact_discharge d ON a.journey_instance_id = d.journey_instance_id
-    GROUP BY a.actor_id, a.journey_instance_id
+    JOIN fact_discharge d ON a.spell_id = d.spell_id
+    GROUP BY a.patient_id, a.spell_id
 )
 SELECT
     p.imd_decile,
     COUNT(*) AS spells,
     ROUND(AVG(EXTRACT(EPOCH FROM (s.discharge_ts - s.admit_ts)) / 86400.0), 1) AS avg_los
 FROM spells s
-JOIN dim_patient p ON s.actor_id = p.id AND p.valid_to IS NULL
+JOIN dim_patient p ON s.patient_id = p.id AND p.valid_to IS NULL
 GROUP BY p.imd_decile
 ORDER BY p.imd_decile;
 ```
@@ -1020,14 +1016,14 @@ ORDER BY p.imd_decile;
 
 ```sql
 WITH referrals AS (
-    SELECT r.actor_id, COUNT(DISTINCT r.journey_instance_id) AS ref_count
+    SELECT r.patient_id, COUNT(DISTINCT r.pathway_id) AS ref_count
     FROM fact_referral_created r
-    GROUP BY r.actor_id
+    GROUP BY r.patient_id
 ),
 attended AS (
-    SELECT a.actor_id, COUNT(DISTINCT a.journey_instance_id) AS att_count
+    SELECT a.patient_id, COUNT(DISTINCT a.pathway_id) AS att_count
     FROM fact_appointment_attended a
-    GROUP BY a.actor_id
+    GROUP BY a.patient_id
 )
 SELECT
     p.imd_decile,
@@ -1035,8 +1031,8 @@ SELECT
     COALESCE(SUM(a.att_count), 0) AS attended,
     ROUND(100.0 * COALESCE(SUM(a.att_count), 0) / SUM(r.ref_count), 1) AS attendance_pct
 FROM referrals r
-JOIN dim_patient p ON r.actor_id = p.id AND p.valid_to IS NULL
-LEFT JOIN attended a ON r.actor_id = a.actor_id
+JOIN dim_patient p ON r.patient_id = p.id AND p.valid_to IS NULL
+LEFT JOIN attended a ON r.patient_id = a.patient_id
 GROUP BY p.imd_decile
 ORDER BY p.imd_decile;
 ```
@@ -1085,7 +1081,7 @@ WITH monthly_ed AS (
 ),
 monthly_admits AS (
     SELECT DATE_TRUNC('month', MIN(timestamp))::DATE AS month,
-           COUNT(DISTINCT journey_instance_id) AS admissions
+           COUNT(DISTINCT spell_id) AS admissions
     FROM fact_admission GROUP BY DATE_TRUNC('month', timestamp)::DATE
 ),
 monthly_discharges AS (
@@ -1229,7 +1225,7 @@ Calculate total surgical revenue from theatre utilisation and procedure tariffs.
 
 - `fact_surgery_performed` links to `dim_theatre` (which theatre was used).
 - `fact_pre_op_assessment` links to `dim_procedure` (which procedure was planned).
-- Can you link a surgery to its procedure? They share a `journey_instance_id` within the surgical pathway.
+- Can you link a surgery to its procedure? They share a `surgical_episode_id` within the surgical pathway.
 - Total revenue = sum of procedure tariffs for all completed surgeries.
 
 </details>
@@ -1249,7 +1245,7 @@ SELECT
         (SELECT MAX(timestamp) FROM fact_surgery_performed)
     ), 1) AS per_day
 FROM fact_surgery_performed sp
-JOIN dim_theatre t ON sp.entity_id = t.id
+JOIN dim_theatre t ON sp.theatre_id = t.id
 GROUP BY t.theatre_name, t.specialty
 ORDER BY surgeries DESC;
 ```
@@ -1259,15 +1255,15 @@ ORDER BY surgeries DESC;
 ```sql
 WITH surgery_procedures AS (
     SELECT
-        sp.journey_instance_id,
+        sp.surgical_episode_id,
         proc.procedure_name,
         proc.complexity,
         proc.tariff,
         proc.specialty_group
     FROM fact_surgery_performed sp
     JOIN fact_pre_op_assessment po
-        ON sp.journey_instance_id = po.journey_instance_id
-    JOIN dim_procedure proc ON po.entity_id = proc.id
+        ON sp.surgical_episode_id = po.surgical_episode_id
+    JOIN dim_procedure proc ON po.procedure_id = proc.id
 )
 SELECT
     complexity,
@@ -1286,7 +1282,7 @@ ORDER BY total_revenue DESC;
 
 Is utilisation roughly even across theatres? The per-day figure gives you a sense of how busy each theatre is across the dataset's time span.
 
-Linking surgeries to their procedures requires going through the `journey_instance_id` -- the surgery fact and the pre-op assessment fact share the same surgical pathway journey. The join gives you the procedure details (name, complexity, tariff) for each completed surgery.
+Linking surgeries to their procedures requires going through the `surgical_episode_id` -- the surgery fact and the pre-op assessment fact share the same surgical pathway journey. The join gives you the procedure details (name, complexity, tariff) for each completed surgery.
 
 Revenue concentrates in complex and major procedures. A small number of high-tariff operations (cardiac, neuro) drive a disproportionate share of surgical income. This is typical of NHS trust finances.
 
@@ -1301,8 +1297,8 @@ The strategy team wants to understand patient retention. Do patients come back f
 <details>
 <summary>Hints</summary>
 
-- A patient can appear in multiple journey instances across different pathways.
-- Count distinct journey instances per patient to measure "engagement."
+- A patient can appear in multiple care episodes across different pathways.
+- Count distinct episodes per patient to measure "engagement."
 - Which patients have the most complex care histories? What conditions?
 - Consider both inpatient spells and outpatient pathways.
 
@@ -1318,9 +1314,9 @@ SELECT
     spells_per_patient,
     COUNT(*) AS patients
 FROM (
-    SELECT actor_id, COUNT(DISTINCT journey_instance_id) AS spells_per_patient
+    SELECT patient_id, COUNT(DISTINCT spell_id) AS spells_per_patient
     FROM fact_admission
-    GROUP BY actor_id
+    GROUP BY patient_id
 )
 GROUP BY spells_per_patient
 ORDER BY spells_per_patient;
@@ -1330,22 +1326,22 @@ ORDER BY spells_per_patient;
 
 ```sql
 WITH patient_journeys AS (
-    SELECT actor_id, 'ed' AS pathway, journey_instance_id FROM fact_ed_arrival
+    SELECT patient_id, 'ed' AS pathway, attendance_id AS journey_id FROM fact_ed_arrival
     UNION ALL
-    SELECT actor_id, 'inpatient', journey_instance_id FROM fact_admission
+    SELECT patient_id, 'inpatient', spell_id FROM fact_admission
     UNION ALL
-    SELECT actor_id, 'outpatient', journey_instance_id FROM fact_referral_created
+    SELECT patient_id, 'outpatient', pathway_id FROM fact_referral_created
     UNION ALL
-    SELECT actor_id, 'surgical', journey_instance_id FROM fact_pre_op_assessment
+    SELECT patient_id, 'surgical', surgical_episode_id FROM fact_pre_op_assessment
     UNION ALL
-    SELECT actor_id, 'cancer', journey_instance_id FROM fact_cancer_referral
+    SELECT patient_id, 'cancer', cancer_pathway_id FROM fact_cancer_referral
 )
 SELECT
-    actor_id,
-    COUNT(DISTINCT journey_instance_id) AS total_journeys,
+    patient_id,
+    COUNT(DISTINCT journey_id) AS total_journeys,
     COUNT(DISTINCT pathway) AS pathway_types
 FROM patient_journeys
-GROUP BY actor_id
+GROUP BY patient_id
 ORDER BY total_journeys DESC
 LIMIT 15;
 ```
@@ -1354,10 +1350,10 @@ LIMIT 15;
 
 ```sql
 WITH patient_spells AS (
-    SELECT actor_id, COUNT(DISTINCT journey_instance_id) AS spell_count
+    SELECT patient_id, COUNT(DISTINCT spell_id) AS spell_count
     FROM fact_admission
-    GROUP BY actor_id
-    HAVING COUNT(DISTINCT journey_instance_id) >= 3
+    GROUP BY patient_id
+    HAVING COUNT(DISTINCT spell_id) >= 3
 )
 SELECT
     p.primary_condition,
@@ -1365,7 +1361,7 @@ SELECT
     AVG(ps.spell_count) AS avg_spells,
     COUNT(*) AS patients
 FROM patient_spells ps
-JOIN dim_patient p ON ps.actor_id = p.id AND p.valid_to IS NULL
+JOIN dim_patient p ON ps.patient_id = p.id AND p.valid_to IS NULL
 GROUP BY p.primary_condition, p.comorbidity_count
 ORDER BY avg_spells DESC;
 ```
@@ -1413,7 +1409,7 @@ SELECT
         THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_within_4h
 FROM fact_ed_arrival arr
 JOIN fact_ed_assessment ea
-    ON arr.journey_instance_id = ea.journey_instance_id
+    ON arr.attendance_id = ea.attendance_id
 GROUP BY quarter
 ORDER BY quarter;
 ```
@@ -1423,13 +1419,13 @@ ORDER BY quarter;
 ```sql
 WITH cancer_times AS (
     SELECT
-        cr.journey_instance_id,
+        cr.cancer_pathway_id,
         MIN(cr.timestamp) AS referral_ts,
         MIN(fs.timestamp) AS first_seen_ts
     FROM fact_cancer_referral cr
     JOIN fact_cancer_first_seen fs
-        ON cr.journey_instance_id = fs.journey_instance_id
-    GROUP BY cr.journey_instance_id
+        ON cr.cancer_pathway_id = fs.cancer_pathway_id
+    GROUP BY cr.cancer_pathway_id
 )
 SELECT
     DATE_TRUNC('quarter', referral_ts)::DATE AS quarter,
@@ -1446,13 +1442,13 @@ ORDER BY quarter;
 ```sql
 WITH diag_times AS (
     SELECT
-        do2.journey_instance_id,
+        do2.request_id,
         MIN(do2.timestamp) AS ordered_ts,
         MIN(dp.timestamp) AS performed_ts
     FROM fact_diagnostic_ordered do2
     JOIN fact_diagnostic_performed dp
-        ON do2.journey_instance_id = dp.journey_instance_id
-    GROUP BY do2.journey_instance_id
+        ON do2.request_id = dp.request_id
+    GROUP BY do2.request_id
 )
 SELECT
     DATE_TRUNC('quarter', ordered_ts)::DATE AS quarter,
@@ -1498,33 +1494,33 @@ Cohort analysis: of patients first seen in 2023, how many had activity in 2024? 
 
 ```sql
 WITH all_activity AS (
-    SELECT actor_id, timestamp FROM fact_ed_arrival
+    SELECT patient_id, timestamp FROM fact_ed_arrival
     UNION ALL
-    SELECT actor_id, timestamp FROM fact_admission
+    SELECT patient_id, timestamp FROM fact_admission
     UNION ALL
-    SELECT actor_id, timestamp FROM fact_referral_created
+    SELECT patient_id, timestamp FROM fact_referral_created
     UNION ALL
-    SELECT actor_id, timestamp FROM fact_pre_op_assessment
+    SELECT patient_id, timestamp FROM fact_pre_op_assessment
     UNION ALL
-    SELECT actor_id, timestamp FROM fact_cancer_referral
+    SELECT patient_id, timestamp FROM fact_cancer_referral
     UNION ALL
-    SELECT actor_id, timestamp FROM fact_appointment_attended
+    SELECT patient_id, timestamp FROM fact_appointment_attended
 ),
 first_activity AS (
-    SELECT actor_id, MIN(timestamp) AS first_ts
+    SELECT patient_id, MIN(timestamp) AS first_ts
     FROM all_activity
-    GROUP BY actor_id
+    GROUP BY patient_id
 ),
 cohort_2023 AS (
-    SELECT actor_id
+    SELECT patient_id
     FROM first_activity
     WHERE EXTRACT(YEAR FROM first_ts) = 2023
 )
 SELECT
     EXTRACT(YEAR FROM a.timestamp)::INTEGER AS activity_year,
-    COUNT(DISTINCT a.actor_id) AS patients_active
+    COUNT(DISTINCT a.patient_id) AS patients_active
 FROM all_activity a
-JOIN cohort_2023 c ON a.actor_id = c.actor_id
+JOIN cohort_2023 c ON a.patient_id = c.patient_id
 GROUP BY activity_year
 ORDER BY activity_year;
 ```

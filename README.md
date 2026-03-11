@@ -74,7 +74,7 @@ SELECT * FROM nhsdb.main.dim_patient LIMIT 10;
 
 | Table | Rows | Description |
 |-------|------|-------------|
-| `dim_patient` | 7,346 | Patient demographics (SCD-2, 5,360 distinct patients) |
+| `dim_patient` | 7,380 | Patient demographics (SCD-2, 5,386 distinct patients) |
 
 ### Clinical Dimensions
 
@@ -86,67 +86,66 @@ SELECT * FROM nhsdb.main.dim_patient LIMIT 10;
 | `dim_medication` | 30 | Medications with BNF categories |
 | `dim_diagnostic` | 12 | Diagnostic tests (MRI, CT, blood, etc.) |
 | `dim_theatre` | 5 | Operating theatres |
-| `dim_clinic` | 6 | Outpatient clinics (not referenced by any fact table) |
 
 ### A&E Facts
 
 | Table | Rows | Description |
 |-------|------|-------------|
-| `fact_ed_arrival` | 2,126 | Emergency department arrivals |
-| `fact_triage` | 2,126 | Triage assessments (category 1-5) |
-| `fact_ed_assessment` | 2,022 | Clinical assessments (includes wait_minutes) |
+| `fact_ed_arrival` | 2,170 | Emergency department arrivals |
+| `fact_triage` | 2,170 | Triage assessments (category 1-5) |
+| `fact_ed_assessment` | 2,056 | Clinical assessments (includes wait_minutes) |
 
 ### Inpatient Facts
 
 | Table | Rows | Description |
 |-------|------|-------------|
-| `fact_admission` | 2,745 | Hospital admissions |
-| `fact_ward_assignment` | 4,416 | Ward and bed assignments |
-| `fact_medication_administered` | 3,211 | Medication events |
-| `fact_icu_care` | 269 | ICU/HDU escalations |
-| `fact_discharge` | 1,073 | Discharges |
-| `fact_dtoc_assessment` | 4,146 | Delayed transfer of care assessments |
+| `fact_admission` | 2,724 | Hospital admissions |
+| `fact_ward_assignment` | 4,339 | Ward and bed assignments |
+| `fact_medication_administered` | 3,198 | Medication events |
+| `fact_icu_care` | 262 | ICU/HDU escalations |
+| `fact_discharge` | 1,124 | Discharges |
+| `fact_dtoc_assessment` | 4,083 | Delayed transfer of care assessments |
 
 ### Outpatient Facts
 
 | Table | Rows | Description |
 |-------|------|-------------|
-| `fact_referral_created` | 10,131 | Outpatient referrals |
-| `fact_appointment_attended` | 18,917 | Attended appointments |
+| `fact_referral_created` | 9,902 | Outpatient referrals |
+| `fact_appointment_attended` | 19,533 | Attended appointments |
 
 ### Surgical Facts
 
 | Table | Rows | Description |
 |-------|------|-------------|
-| `fact_pre_op_assessment` | 2,520 | Pre-operative assessments (links to procedure) |
-| `fact_surgeon_assigned` | 3,976 | Surgeon assignments |
-| `fact_surgery_performed` | 4,209 | Completed surgeries (links to theatre) |
+| `fact_pre_op_assessment` | 2,635 | Pre-operative assessments (links to procedure) |
+| `fact_surgeon_assigned` | 4,040 | Surgeon assignments |
+| `fact_surgery_performed` | 4,434 | Completed surgeries (links to theatre) |
 
 ### Cancer Facts
 
 | Table | Rows | Description |
 |-------|------|-------------|
-| `fact_cancer_referral` | 10,099 | Cancer pathway referrals |
-| `fact_cancer_first_seen` | 5,758 | First consultant appointments |
+| `fact_cancer_referral` | 9,741 | Cancer pathway referrals |
+| `fact_cancer_first_seen` | 5,559 | First consultant appointments |
 
 ### Diagnostics
 
 | Table | Rows | Description |
 |-------|------|-------------|
-| `fact_diagnostic_ordered` | 8,244 | Diagnostic test orders |
-| `fact_diagnostic_performed` | 4,267 | Completed tests |
+| `fact_diagnostic_ordered` | 8,500 | Diagnostic test orders |
+| `fact_diagnostic_performed` | 4,381 | Completed tests |
 
 ### Other
 
 | Table | Rows | Description |
 |-------|------|-------------|
-| `fact_fft_response` | 960 | Friends and Family Test responses (recommendation_score) |
-| `fact_safety_incident` | 31 | Safety incidents |
-| `fact_death_record` | 9 | In-hospital deaths |
+| `fact_fft_response` | 944 | Friends and Family Test responses (recommendation_score) |
+| `fact_safety_incident` | 24 | Safety incidents |
+| `fact_death_record` | 8 | In-hospital deaths |
 
-5,360 distinct patients across 3 years (2023-2025). Generated with [Fabulexa](https://github.com/leogodin217/fabulexa_sim) (a configurable synthetic data generator).
+5,386 distinct patients across 3 years (2023-2025). Generated with [Fabulexa](https://github.com/leogodin217/fabulexa_sim) (a configurable synthetic data generator).
 
-A 30th table (`fact_journey_states`) is available as a CSV in `data/` but not loaded into the database. It contains detailed state-by-state patient pathway data. Advanced users can load it manually for richer temporal analysis.
+A 28th table (`fact_journey_states`) is available as a CSV in `data/` but not loaded into the database. It contains detailed state-by-state patient pathway data. Advanced users can load it manually for richer temporal analysis.
 
 ## Use of AI
 
