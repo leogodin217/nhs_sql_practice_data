@@ -1,10 +1,9 @@
-decision_id,timestamp,actor_type,actor_id,entity_type,entity_id,event_sequence,journey_type,journey_instance_id,journey_state
-11850,2023-04-28 16:30:58.322545,patient,PAT_0000042,consultant,CON_006,12763,inpatient_spell,inst_01965,deceased
-60361,2024-04-05 20:01:16.648762,patient,PAT_0002129,consultant,CON_024,63329,inpatient_spell,inst_08205,deceased
-125810,2025-03-31 21:11:57.436519,patient,PAT_0003638,consultant,CON_022,131468,inpatient_spell,inst_16790,deceased
-128706,2025-04-14 04:13:34.389424,patient,PAT_0003891,consultant,CON_024,134461,inpatient_spell,inst_17095,deceased
-146680,2025-07-14 13:03:34.401615,patient,PAT_0003722,consultant,CON_013,153031,inpatient_spell,inst_19339,deceased
-147588,2025-07-17 04:54:55.580142,patient,PAT_0004570,consultant,CON_002,153973,inpatient_spell,inst_19370,deceased
-155434,2025-08-30 06:32:12.831698,patient,PAT_0004772,consultant,CON_001,162109,inpatient_spell,inst_20416,deceased
-158218,2025-09-15 18:15:06.250737,patient,PAT_0004860,consultant,CON_004,165019,inpatient_spell,inst_20807,deceased
-174005,2025-12-14 13:46:07.433198,patient,PAT_0005272,consultant,CON_024,181372,inpatient_spell,inst_22813,deceased
+decision_id,timestamp,event_sequence,patient_id,consultant_id,spell_id,state
+30540,2023-09-13 19:29:40.488214,32312,PAT_0000945,CON_011,inst_04431,deceased
+58908,2024-03-21 18:52:59.366414,61851,PAT_0001888,CON_023,inst_08134,deceased
+67861,2024-05-13 17:18:00.070132,71162,PAT_0000906,CON_023,inst_09312,deceased
+83861,2024-08-16 21:55:37.985505,87748,PAT_0002821,CON_008,inst_11232,deceased
+106559,2024-12-24 02:21:34.452720,111431,PAT_0003017,CON_006,inst_14233,deceased
+138043,2025-05-23 09:50:59.939368,144147,PAT_0003756,CON_005,inst_18306,deceased
+149546,2025-07-20 10:56:05.903221,156041,PAT_0003540,CON_005,inst_19715,deceased
+156362,2025-08-26 04:40:13.659141,163060,PAT_0004820,CON_010,inst_20484,deceased
