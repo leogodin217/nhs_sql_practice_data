@@ -267,6 +267,9 @@
   import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm/+esm';
   import { marked } from 'https://cdn.jsdelivr.net/npm/marked/+esm';
 
+  // Cache-bust local fetches so GitHub Pages CDN updates take effect
+  const CACHE_V = '?v=' + Date.now();
+
   // ── DOM refs ───────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
   const loadingOverlay  = $('loading-overlay');
@@ -308,7 +311,7 @@
       // 2. Fetch build script + exercises in parallel
       loadingMessage.textContent = 'Fetching schema\u2026';
       const [buildSql] = await Promise.all([
-        fetch('./build_db.sql').then(r => { if (!r.ok) throw new Error('Failed to load build_db.sql'); return r.text(); }),
+        fetch('./build_db.sql' + CACHE_V).then(r => { if (!r.ok) throw new Error('Failed to load build_db.sql'); return r.text(); }),
         loadExercises(),
       ]);
 
@@ -323,7 +326,7 @@
       loadingMessage.textContent = `Loading data (0/${total})\u2026`;
 
       await Promise.all(csvPaths.map(async (path) => {
-        const resp = await fetch('./' + path);
+        const resp = await fetch('./' + path + CACHE_V);
         if (!resp.ok) throw new Error(`Failed to fetch ${path}`);
         await db.registerFileText(path, await resp.text());
         loaded++;
@@ -362,7 +365,7 @@
 
   async function loadExercises() {
     try {
-      const resp = await fetch('./exercises.md');
+      const resp = await fetch('./exercises.md' + CACHE_V);
       if (!resp.ok) throw new Error();
       exercisesEl.innerHTML = marked.parse(await resp.text());
     } catch {

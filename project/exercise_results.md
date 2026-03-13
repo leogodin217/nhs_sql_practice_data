@@ -11,7 +11,7 @@ FROM dim_patient;
 
 | patient_count |
 |---------------|
-| 5386          |
+| 16659         |
 
 
 ### Only current patients
@@ -24,7 +24,7 @@ WHERE valid_to IS NULL;
 
 | current_patients |
 |------------------|
-| 5386             |
+| 16659            |
 
 
 ---
@@ -34,7 +34,12 @@ WHERE valid_to IS NULL;
 ### Ward summary
 
 ```sql
-SELECT ward_name, ward_type, department, total_beds, cost_per_bed_day
+SELECT
+    ward_name,
+    ward_type,
+    department,
+    total_beds,
+    cost_per_bed_day
 FROM dim_ward
 ORDER BY total_beds DESC;
 ```
@@ -56,7 +61,10 @@ ORDER BY total_beds DESC;
 ### Consultant summary
 
 ```sql
-SELECT specialty_group, grade, COUNT(*) AS consultants
+SELECT
+    specialty_group,
+    grade,
+    COUNT(*) AS consultants
 FROM dim_consultant
 GROUP BY specialty_group, grade
 ORDER BY specialty_group, grade;
@@ -65,26 +73,28 @@ ORDER BY specialty_group, grade;
 | specialty_group  | grade      | consultants |
 |------------------|------------|-------------|
 | cardiac          | SHO        | 1           |
-| cardiac          | consultant | 3           |
+| cardiac          | consultant | 2           |
 | cardiac          | registrar  | 1           |
 | gastrointestinal | SHO        | 1           |
 | gastrointestinal | consultant | 3           |
 | gastrointestinal | registrar  | 1           |
 | general          | SHO        | 1           |
 | general          | consultant | 3           |
-| general          | registrar  | 1           |
-| musculoskeletal  | SHO        | 1           |
-| musculoskeletal  | consultant | 3           |
+| general          | registrar  | 2           |
+| musculoskeletal  | consultant | 2           |
 | musculoskeletal  | registrar  | 1           |
 | respiratory      | SHO        | 1           |
-| respiratory      | consultant | 3           |
-| respiratory      | registrar  | 1           |
+| respiratory      | consultant | 4           |
+| respiratory      | registrar  | 2           |
 
 
 ### Theatre summary
 
 ```sql
-SELECT theatre_name, specialty, sessions_per_day
+SELECT
+    theatre_name,
+    specialty,
+    sessions_per_day
 FROM dim_theatre;
 ```
 
@@ -97,19 +107,24 @@ FROM dim_theatre;
 | Obstetric Theatre   | Obstetrics                   | 2                |
 
 
-### Orphan check -- does dim_clinic appear in any fact table?
+### Quick inventory -- which dimension tables exist?
 
 ```sql
-SELECT table_name, column_name
-FROM information_schema.columns
-WHERE column_name = 'clinic_id'
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'main' AND table_name LIKE 'dim_%'
 ORDER BY table_name;
 ```
 
-| table_name | column_name |
-|------------|-------------|
-
-*(No rows -- no fact table references a clinic dimension.)*
+| table_name     |
+|----------------|
+| dim_consultant |
+| dim_diagnostic |
+| dim_medication |
+| dim_patient    |
+| dim_procedure  |
+| dim_theatre    |
+| dim_ward       |
 
 
 ---
@@ -120,28 +135,30 @@ ORDER BY table_name;
 
 ```sql
 WITH busiest AS (
-    SELECT timestamp::DATE AS day, COUNT(*) AS arrivals
+    SELECT
+        timestamp::DATE AS day,
+        COUNT(*) AS arrivals
     FROM fact_ed_arrival
     GROUP BY day
     ORDER BY arrivals DESC
     LIMIT 1
 )
 SELECT
-    t.triage_category,
+    triage.triage_category,
     COUNT(*) AS patients
-FROM fact_triage t
-WHERE t.timestamp::DATE = (SELECT day FROM busiest)
-GROUP BY t.triage_category
-ORDER BY t.triage_category;
+FROM fact_triage triage
+WHERE triage.timestamp::DATE = (SELECT day FROM busiest)
+GROUP BY triage.triage_category
+ORDER BY triage.triage_category;
 ```
 
 | triage_category | patients |
 |-----------------|----------|
-| 1               | 7        |
+| 1               | 3        |
 | 2               | 8        |
-| 3               | 3        |
-| 4               | 4        |
-| 5               | 6        |
+| 3               | 7        |
+| 4               | 16       |
+| 5               | 5        |
 
 
 ---
@@ -151,7 +168,9 @@ ORDER BY t.triage_category;
 ### Pathway split
 
 ```sql
-SELECT pathway_type, COUNT(*) AS patients
+SELECT
+    pathway_type,
+    COUNT(*) AS patients
 FROM dim_patient
 WHERE valid_to IS NULL
 GROUP BY pathway_type
@@ -160,15 +179,17 @@ ORDER BY patients DESC;
 
 | pathway_type | patients |
 |--------------|----------|
-| elective     | 2909     |
-| emergency    | 1937     |
-| cancer       | 540      |
+| elective     | 9194     |
+| emergency    | 5783     |
+| cancer       | 1682     |
 
 
 ### Primary condition breakdown
 
 ```sql
-SELECT primary_condition, COUNT(*) AS patients
+SELECT
+    primary_condition,
+    COUNT(*) AS patients
 FROM dim_patient
 WHERE valid_to IS NULL
 GROUP BY primary_condition
@@ -177,19 +198,21 @@ ORDER BY patients DESC;
 
 | primary_condition | patients |
 |-------------------|----------|
-| cardiac           | 1201     |
-| respiratory       | 990      |
-| ortho             | 799      |
-| GI                | 785      |
-| neuro             | 614      |
-| infectious        | 535      |
-| obstetric         | 462      |
+| cardiac           | 3580     |
+| respiratory       | 3083     |
+| ortho             | 2515     |
+| GI                | 2473     |
+| neuro             | 1976     |
+| infectious        | 1619     |
+| obstetric         | 1413     |
 
 
 ### IMD decile distribution
 
 ```sql
-SELECT imd_decile, COUNT(*) AS patients
+SELECT
+    imd_decile,
+    COUNT(*) AS patients
 FROM dim_patient
 WHERE valid_to IS NULL
 GROUP BY imd_decile
@@ -198,16 +221,16 @@ ORDER BY imd_decile;
 
 | imd_decile | patients |
 |------------|----------|
-| 1          | 511      |
-| 2          | 540      |
-| 3          | 516      |
-| 4          | 574      |
-| 5          | 560      |
-| 6          | 530      |
-| 7          | 541      |
-| 8          | 540      |
-| 9          | 556      |
-| 10         | 518      |
+| 1          | 1976     |
+| 2          | 1643     |
+| 3          | 2204     |
+| 4          | 2566     |
+| 5          | 2567     |
+| 6          | 2192     |
+| 7          | 1550     |
+| 8          | 1025     |
+| 9          | 558      |
+| 10         | 378      |
 
 
 ---
@@ -219,19 +242,19 @@ ORDER BY imd_decile;
 ```sql
 SELECT
     COUNT(*) AS assessed_patients,
-    ROUND(AVG(EXTRACT(EPOCH FROM (ea.timestamp - arr.timestamp)) / 60), 0) AS avg_minutes,
-    SUM(CASE WHEN EXTRACT(EPOCH FROM (ea.timestamp - arr.timestamp)) / 60 <= 240
+    ROUND(AVG(EXTRACT(EPOCH FROM (assessment.timestamp - arrival.timestamp)) / 60), 0) AS avg_minutes,
+    SUM(CASE WHEN EXTRACT(EPOCH FROM (assessment.timestamp - arrival.timestamp)) / 60 <= 240
         THEN 1 ELSE 0 END) AS within_4h,
-    ROUND(100.0 * SUM(CASE WHEN EXTRACT(EPOCH FROM (ea.timestamp - arr.timestamp)) / 60 <= 240
+    ROUND(100.0 * SUM(CASE WHEN EXTRACT(EPOCH FROM (assessment.timestamp - arrival.timestamp)) / 60 <= 240
         THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_within_4h
-FROM fact_ed_arrival arr
-JOIN fact_ed_assessment ea
-    ON arr.attendance_id = ea.attendance_id;
+FROM fact_ed_arrival arrival
+JOIN fact_ed_assessment assessment
+    ON arrival.attendance_id = assessment.attendance_id;
 ```
 
 | assessed_patients | avg_minutes | within_4h | pct_within_4h |
 |-------------------|-------------|-----------|---------------|
-| 2056              | 141.0       | 1758      | 85.5          |
+| 10174             | 144         | 8554      | 84.1          |
 
 
 ---
@@ -243,13 +266,13 @@ JOIN fact_ed_assessment ea
 ```sql
 WITH spells AS (
     SELECT
-        a.spell_id,
-        MIN(a.timestamp) AS admission_ts,
-        MIN(d.timestamp) AS discharge_ts
-    FROM fact_admission a
-    JOIN fact_discharge d
-        ON a.spell_id = d.spell_id
-    GROUP BY a.spell_id
+        admission.spell_id,
+        MIN(admission.timestamp) AS admission_ts,
+        MIN(discharge.timestamp) AS discharge_ts
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.spell_id
 )
 SELECT
     COUNT(*) AS completed_spells,
@@ -262,7 +285,7 @@ FROM spells;
 
 | completed_spells | mean_los_days | median_los_days |
 |------------------|---------------|-----------------|
-| 1124             | 5.5           | 5.1             |
+| 5403             | 5.9           | 5.7             |
 
 
 ### ALOS by primary condition
@@ -270,34 +293,35 @@ FROM spells;
 ```sql
 WITH spells AS (
     SELECT
-        a.spell_id,
-        a.patient_id,
-        MIN(a.timestamp) AS admission_ts,
-        MIN(d.timestamp) AS discharge_ts
-    FROM fact_admission a
-    JOIN fact_discharge d
-        ON a.spell_id = d.spell_id
-    GROUP BY a.spell_id, a.patient_id
+        admission.spell_id,
+        admission.patient_id,
+        MIN(admission.timestamp) AS admission_ts,
+        MIN(discharge.timestamp) AS discharge_ts
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.spell_id, admission.patient_id
 )
 SELECT
-    p.primary_condition,
+    patient.primary_condition,
     COUNT(*) AS spells,
-    ROUND(AVG(EXTRACT(EPOCH FROM (s.discharge_ts - s.admission_ts)) / 86400.0), 1) AS mean_los
-FROM spells s
-JOIN dim_patient p ON s.patient_id = p.id AND p.valid_to IS NULL
-GROUP BY p.primary_condition
-ORDER BY mean_los DESC;
+    ROUND(AVG(EXTRACT(EPOCH FROM (spell.discharge_ts - spell.admission_ts)) / 86400.0), 1) AS mean_los
+FROM spells spell
+JOIN dim_patient patient
+    ON spell.patient_id = patient.id AND patient.valid_to IS NULL
+GROUP BY patient.primary_condition
+ORDER BY mean_los DESC, primary_condition;
 ```
 
 | primary_condition | spells | mean_los |
 |-------------------|--------|----------|
-| ortho             | 185    | 5.7      |
-| GI                | 161    | 5.6      |
-| cardiac           | 227    | 5.5      |
-| respiratory       | 196    | 5.5      |
-| neuro             | 139    | 5.3      |
-| infectious        | 116    | 5.3      |
-| obstetric         | 100    | 5.2      |
+| neuro             | 711    | 6        |
+| obstetric         | 428    | 6        |
+| GI                | 820    | 5.9      |
+| cardiac           | 1124   | 5.9      |
+| infectious        | 551    | 5.9      |
+| respiratory       | 982    | 5.9      |
+| ortho             | 787    | 5.7      |
 
 
 ---
@@ -321,8 +345,8 @@ ORDER BY pathways DESC;
 
 | stage     | pathways |
 |-----------|----------|
-| referrals | 3242     |
-| attended  | 2568     |
+| referrals | 9611     |
+| attended  | 3776     |
 
 
 ### Referral volume by month
@@ -338,42 +362,42 @@ ORDER BY month;
 
 | month      | referrals |
 |------------|-----------|
-| 2023-01-01 | 124       |
-| 2023-02-01 | 85        |
-| 2023-03-01 | 76        |
-| 2023-04-01 | 77        |
-| 2023-05-01 | 92        |
-| 2023-06-01 | 104       |
-| 2023-07-01 | 83        |
-| 2023-08-01 | 89        |
-| 2023-09-01 | 73        |
-| 2023-10-01 | 93        |
-| 2023-11-01 | 90        |
-| 2023-12-01 | 85        |
-| 2024-01-01 | 110       |
-| 2024-02-01 | 82        |
-| 2024-03-01 | 81        |
-| 2024-04-01 | 107       |
-| 2024-05-01 | 115       |
-| 2024-06-01 | 68        |
-| 2024-07-01 | 95        |
-| 2024-08-01 | 89        |
-| 2024-09-01 | 93        |
-| 2024-10-01 | 97        |
-| 2024-11-01 | 141       |
-| 2024-12-01 | 142       |
-| 2025-01-01 | 122       |
-| 2025-02-01 | 123       |
-| 2025-03-01 | 122       |
-| 2025-04-01 | 107       |
-| 2025-05-01 | 100       |
-| 2025-06-01 | 87        |
-| 2025-07-01 | 98        |
-| 2025-08-01 | 65        |
-| 2025-09-01 | 102       |
-| 2025-10-01 | 101       |
-| 2025-11-01 | 86        |
-| 2025-12-01 | 113       |
+| 2023-01-01 | 239       |
+| 2023-02-01 | 176       |
+| 2023-03-01 | 199       |
+| 2023-04-01 | 137       |
+| 2023-05-01 | 155       |
+| 2023-06-01 | 150       |
+| 2023-07-01 | 137       |
+| 2023-08-01 | 191       |
+| 2023-09-01 | 181       |
+| 2023-10-01 | 190       |
+| 2023-11-01 | 238       |
+| 2023-12-01 | 217       |
+| 2024-01-01 | 296       |
+| 2024-02-01 | 245       |
+| 2024-03-01 | 256       |
+| 2024-04-01 | 251       |
+| 2024-05-01 | 226       |
+| 2024-06-01 | 216       |
+| 2024-07-01 | 271       |
+| 2024-08-01 | 286       |
+| 2024-09-01 | 251       |
+| 2024-10-01 | 293       |
+| 2024-11-01 | 257       |
+| 2024-12-01 | 354       |
+| 2025-01-01 | 385       |
+| 2025-02-01 | 347       |
+| 2025-03-01 | 307       |
+| 2025-04-01 | 320       |
+| 2025-05-01 | 313       |
+| 2025-06-01 | 340       |
+| 2025-07-01 | 371       |
+| 2025-08-01 | 327       |
+| 2025-09-01 | 344       |
+| 2025-10-01 | 388       |
+| 2025-11-01 | 347       |
+| 2025-12-01 | 410       |
 
 
 ---
@@ -394,11 +418,11 @@ ORDER BY recommendation_score;
 
 | recommendation_score | responses | pct  |
 |----------------------|-----------|------|
-| 1                    | 332       | 35.2 |
-| 2                    | 423       | 44.8 |
-| 3                    | 165       | 17.5 |
-| 4                    | 23        | 2.4  |
-| 5                    | 1         | 0.1  |
+| 1                    | 4         | 0.1  |
+| 2                    | 54        | 1.2  |
+| 3                    | 642       | 14   |
+| 4                    | 2017      | 43.9 |
+| 5                    | 1880      | 40.9 |
 
 
 ### FFT recommend rate
@@ -414,7 +438,7 @@ FROM fact_fft_response;
 
 | total_responses | positive | recommend_pct |
 |-----------------|----------|---------------|
-| 944             | 24       | 2.5           |
+| 4597            | 3897     | 84.8          |
 
 
 ---
@@ -425,65 +449,67 @@ FROM fact_fft_response;
 
 ```sql
 SELECT
-    c.id,
-    c.specialty_group,
-    c.grade,
+    consultant.id,
+    consultant.specialty_group,
+    consultant.grade,
     COUNT(*) AS admissions
-FROM fact_admission a
-JOIN dim_consultant c ON a.consultant_id = c.id
-GROUP BY c.id, c.specialty_group, c.grade
-ORDER BY admissions DESC;
+FROM fact_admission admission
+JOIN dim_consultant consultant
+    ON admission.consultant_id = consultant.id
+GROUP BY consultant.id, consultant.specialty_group, consultant.grade
+ORDER BY admissions DESC, consultant.id;
 ```
 
 | id      | specialty_group  | grade      | admissions |
 |---------|------------------|------------|------------|
-| CON_006 | respiratory      | consultant | 187        |
-| CON_008 | respiratory      | consultant | 186        |
-| CON_009 | respiratory      | registrar  | 160        |
-| CON_007 | respiratory      | consultant | 148        |
-| CON_010 | respiratory      | SHO        | 127        |
-| CON_024 | general          | registrar  | 126        |
-| CON_001 | cardiac          | consultant | 124        |
-| CON_011 | musculoskeletal  | consultant | 117        |
-| CON_021 | general          | consultant | 113        |
-| CON_022 | general          | consultant | 113        |
-| CON_004 | cardiac          | registrar  | 111        |
-| CON_003 | cardiac          | consultant | 111        |
-| CON_023 | general          | consultant | 108        |
-| CON_002 | cardiac          | consultant | 104        |
-| CON_016 | gastrointestinal | consultant | 102        |
-| CON_012 | musculoskeletal  | consultant | 101        |
-| CON_013 | musculoskeletal  | consultant | 93         |
-| CON_017 | gastrointestinal | consultant | 88         |
-| CON_014 | musculoskeletal  | registrar  | 85         |
-| CON_018 | gastrointestinal | consultant | 78         |
-| CON_019 | gastrointestinal | registrar  | 75         |
-| CON_025 | general          | SHO        | 73         |
-| CON_005 | cardiac          | SHO        | 72         |
-| CON_020 | gastrointestinal | SHO        | 65         |
-| CON_015 | musculoskeletal  | SHO        | 57         |
+| CON_012 | musculoskeletal  | consultant | 556        |
+| CON_002 | cardiac          | consultant | 521        |
+| CON_005 | respiratory      | consultant | 471        |
+| CON_001 | cardiac          | consultant | 429        |
+| CON_003 | cardiac          | registrar  | 414        |
+| CON_007 | respiratory      | consultant | 390        |
+| CON_006 | respiratory      | consultant | 380        |
+| CON_021 | general          | consultant | 367        |
+| CON_020 | general          | consultant | 345        |
+| CON_013 | musculoskeletal  | consultant | 344        |
+| CON_004 | cardiac          | SHO        | 339        |
+| CON_009 | respiratory      | registrar  | 338        |
+| CON_017 | gastrointestinal | consultant | 305        |
+| CON_015 | gastrointestinal | consultant | 297        |
+| CON_011 | respiratory      | SHO        | 288        |
+| CON_024 | general          | registrar  | 283        |
+| CON_014 | musculoskeletal  | registrar  | 278        |
+| CON_010 | respiratory      | registrar  | 253        |
+| CON_023 | general          | registrar  | 252        |
+| CON_016 | gastrointestinal | consultant | 247        |
+| CON_025 | general          | SHO        | 247        |
+| CON_022 | general          | consultant | 243        |
+| CON_018 | gastrointestinal | registrar  | 234        |
+| CON_019 | gastrointestinal | SHO        | 166        |
+| CON_008 | respiratory      | consultant | 141        |
 
 
 ### Workload by specialty group
 
 ```sql
 SELECT
-    c.specialty_group,
+    consultant.specialty_group,
     COUNT(*) AS total_admissions,
-    COUNT(DISTINCT a.patient_id) AS unique_patients
-FROM fact_admission a
-JOIN dim_consultant c ON a.consultant_id = c.id
-GROUP BY c.specialty_group
+    COUNT(DISTINCT admission.patient_id) AS unique_patients
+FROM fact_admission admission
+JOIN dim_consultant consultant
+    ON admission.consultant_id = consultant.id
+GROUP BY consultant.specialty_group
 ORDER BY total_admissions DESC;
 ```
 
 | specialty_group  | total_admissions | unique_patients |
 |------------------|------------------|-----------------|
-| respiratory      | 808              | 423             |
-| general          | 533              | 301             |
-| cardiac          | 522              | 312             |
-| musculoskeletal  | 453              | 248             |
-| gastrointestinal | 408              | 231             |
+| respiratory      | 2261             | 1563            |
+| general          | 1737             | 1151            |
+| cardiac          | 1703             | 1178            |
+| gastrointestinal | 1249             | 824             |
+| musculoskeletal  | 1178             | 793             |
 
 
 ---
@@ -521,25 +547,26 @@ SELECT
     proc.tariff,
     proc.specialty_group,
     COUNT(*) AS times_performed
-FROM fact_pre_op_assessment f
-JOIN dim_procedure proc ON f.procedure_id = proc.id
+FROM fact_pre_op_assessment assessment
+JOIN dim_procedure proc
+    ON assessment.procedure_id = proc.id
 GROUP BY proc.procedure_name, proc.complexity, proc.tariff, proc.specialty_group
 ORDER BY proc.tariff DESC
 LIMIT 10;
 ```
 
-| procedure_name           | complexity | tariff  | specialty_group  | times_performed |
-|--------------------------|------------|---------|------------------|-----------------|
-| Aortic valve replacement | complex    | 14000.0 | cardiac          | 80              |
-| CABG                     | complex    | 12500.0 | cardiac          | 88              |
-| Lung resection           | complex    | 11000.0 | respiratory      | 122             |
-| Total hip replacement    | complex    | 10500.0 | musculoskeletal  | 77              |
-| Total knee replacement   | complex    | 10200.0 | musculoskeletal  | 67              |
-| Bowel resection          | complex    | 9800.0  | gastrointestinal | 46              |
-| Thoracotomy              | major      | 9500.0  | respiratory      | 100             |
-| Coronary angioplasty     | complex    | 8500.0  | cardiac          | 81              |
-| Hip hemiarthroplasty     | major      | 7800.0  | musculoskeletal  | 71              |
-| Spinal decompression     | major      | 7200.0  | musculoskeletal  | 72              |
+| procedure_name           | complexity | tariff | specialty_group  | times_performed |
+|--------------------------|------------|--------|------------------|-----------------|
+| Aortic valve replacement | complex    | 14000  | cardiac          | 122             |
+| CABG                     | complex    | 12500  | cardiac          | 104             |
+| Lung resection           | complex    | 11000  | respiratory      | 158             |
+| Total hip replacement    | complex    | 10500  | musculoskeletal  | 70              |
+| Total knee replacement   | complex    | 10200  | musculoskeletal  | 94              |
+| Bowel resection          | complex    | 9800   | gastrointestinal | 84              |
+| Thoracotomy              | major      | 9500   | respiratory      | 140             |
+| Coronary angioplasty     | complex    | 8500   | cardiac          | 123             |
+| Hip hemiarthroplasty     | major      | 7800   | musculoskeletal  | 79              |
+| Pacemaker insertion      | major      | 7200   | cardiac          | 108             |
 
 
 ---
@@ -551,13 +578,13 @@ LIMIT 10;
 ```sql
 WITH cancer_times AS (
     SELECT
-        cr.cancer_pathway_id,
-        MIN(cr.timestamp) AS referral_ts,
-        MIN(fs.timestamp) AS first_seen_ts
-    FROM fact_cancer_referral cr
-    JOIN fact_cancer_first_seen fs
-        ON cr.cancer_pathway_id = fs.cancer_pathway_id
-    GROUP BY cr.cancer_pathway_id
+        referral.cancer_pathway_id,
+        MIN(referral.timestamp) AS referral_ts,
+        MIN(first_seen.timestamp) AS first_seen_ts
+    FROM fact_cancer_referral referral
+    JOIN fact_cancer_first_seen first_seen
+        ON referral.cancer_pathway_id = first_seen.cancer_pathway_id
+    GROUP BY referral.cancer_pathway_id
 )
 SELECT
     COUNT(*) AS pathways_seen,
@@ -571,7 +598,7 @@ FROM cancer_times;
 
 | pathways_seen | avg_days | within_28d | pct_fds |
 |---------------|----------|------------|---------|
-| 605           | 22.0     | 452        | 74.7    |
+| 726           | 10       | 705        | 97.1    |
 
 
 ---
@@ -583,13 +610,13 @@ FROM cancer_times;
 ```sql
 WITH diag_times AS (
     SELECT
-        do2.request_id,
-        MIN(do2.timestamp) AS ordered_ts,
-        MIN(dp.timestamp) AS performed_ts
-    FROM fact_diagnostic_ordered do2
-    JOIN fact_diagnostic_performed dp
-        ON do2.request_id = dp.request_id
-    GROUP BY do2.request_id
+        ordered.request_id,
+        MIN(ordered.timestamp) AS ordered_ts,
+        MIN(performed.timestamp) AS performed_ts
+    FROM fact_diagnostic_ordered ordered
+    JOIN fact_diagnostic_performed performed
+        ON ordered.request_id = performed.request_id
+    GROUP BY ordered.request_id
 )
 SELECT
     COUNT(*) AS tests_completed,
@@ -603,7 +630,7 @@ FROM diag_times;
 
 | tests_completed | avg_days | within_6wk | pct_compliance |
 |-----------------|----------|------------|----------------|
-| 1303            | 36.0     | 1064       | 81.7           |
+| 1371            | 11       | 1329       | 96.9           |
 
 
 ### By test type
@@ -611,35 +638,36 @@ FROM diag_times;
 ```sql
 WITH diag_times AS (
     SELECT
-        do2.request_id,
-        do2.diagnostic_id,
-        MIN(do2.timestamp) AS ordered_ts,
-        MIN(dp.timestamp) AS performed_ts
-    FROM fact_diagnostic_ordered do2
-    JOIN fact_diagnostic_performed dp
-        ON do2.request_id = dp.request_id
-    GROUP BY do2.request_id, do2.diagnostic_id
+        ordered.request_id,
+        ordered.diagnostic_id,
+        MIN(ordered.timestamp) AS ordered_ts,
+        MIN(performed.timestamp) AS performed_ts
+    FROM fact_diagnostic_ordered ordered
+    JOIN fact_diagnostic_performed performed
+        ON ordered.request_id = performed.request_id
+    GROUP BY ordered.request_id, ordered.diagnostic_id
 )
 SELECT
-    d.test_type,
+    diagnostic.test_type,
     COUNT(*) AS completed,
-    ROUND(AVG(EXTRACT(EPOCH FROM (dt.performed_ts - dt.ordered_ts)) / 86400.0), 0) AS avg_days
-FROM diag_times dt
-JOIN dim_diagnostic d ON dt.diagnostic_id = d.id
-GROUP BY d.test_type
+    ROUND(AVG(EXTRACT(EPOCH FROM (diag_time.performed_ts - diag_time.ordered_ts)) / 86400.0), 0) AS avg_days
+FROM diag_times diag_time
+JOIN dim_diagnostic diagnostic
+    ON diag_time.diagnostic_id = diagnostic.id
+GROUP BY diagnostic.test_type
 ORDER BY avg_days DESC;
 ```
 
 | test_type  | completed | avg_days |
 |------------|-----------|----------|
-| blood      | 1261      | 35.0     |
-| mri        | 416       | 35.0     |
-| ultrasound | 415       | 35.0     |
-| endoscopy  | 405       | 35.0     |
-| pathology  | 425       | 34.0     |
-| xray       | 449       | 34.0     |
-| other      | 1256      | 34.0     |
-| ct         | 407       | 34.0     |
+| mri        | 51        | 40       |
+| ultrasound | 41        | 39       |
+| ct         | 37        | 36       |
+| endoscopy  | 121       | 16       |
+| other      | 346       | 16       |
+| xray       | 143       | 3        |
+| pathology  | 143       | 3        |
+| blood      | 489       | 3        |
 
 
 ---
@@ -650,32 +678,36 @@ ORDER BY avg_days DESC;
 
 ```sql
 WITH ed_patients AS (
-    SELECT patient_id, attendance_id AS ed_instance, timestamp AS ed_arrival_ts
+    SELECT
+        patient_id,
+        attendance_id AS ed_instance,
+        timestamp AS ed_arrival_ts
     FROM fact_ed_arrival
 ),
 ip_spells AS (
     SELECT
-        a.patient_id,
-        a.spell_id AS ip_instance,
-        MIN(a.timestamp) AS admit_ts,
-        MIN(d.timestamp) AS discharge_ts
-    FROM fact_admission a
-    JOIN fact_discharge d ON a.spell_id = d.spell_id
-    GROUP BY a.patient_id, a.spell_id
+        admission.patient_id,
+        admission.spell_id AS ip_instance,
+        MIN(admission.timestamp) AS admit_ts,
+        MIN(discharge.timestamp) AS discharge_ts
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.patient_id, admission.spell_id
 )
 SELECT
     COUNT(*) AS ed_admitted_spells,
-    ROUND(AVG(EXTRACT(EPOCH FROM (ip.discharge_ts - ip.admit_ts)) / 86400.0), 1) AS ed_alos,
+    ROUND(AVG(EXTRACT(EPOCH FROM (inpatient.discharge_ts - inpatient.admit_ts)) / 86400.0), 1) AS ed_alos,
     (SELECT ROUND(AVG(EXTRACT(EPOCH FROM (discharge_ts - admit_ts)) / 86400.0), 1) FROM ip_spells) AS overall_alos
-FROM ed_patients e
-JOIN ip_spells ip
-    ON e.patient_id = ip.patient_id
-    AND ip.admit_ts BETWEEN e.ed_arrival_ts AND e.ed_arrival_ts + INTERVAL '24 hours';
+FROM ed_patients ed
+JOIN ip_spells inpatient
+    ON ed.patient_id = inpatient.patient_id
+    AND inpatient.admit_ts BETWEEN ed.ed_arrival_ts AND ed.ed_arrival_ts + INTERVAL '24 hours';
 ```
 
 | ed_admitted_spells | ed_alos | overall_alos |
 |--------------------|---------|--------------|
-| 195                | 5.4     | 5.5          |
+| 1132               | 5.9     | 5.9          |
 
 
 ---
@@ -687,29 +719,30 @@ JOIN ip_spells ip
 ```sql
 WITH spells AS (
     SELECT
-        a.patient_id,
-        a.spell_id,
-        MIN(a.timestamp) AS admit_ts,
-        MIN(d.timestamp) AS discharge_ts
-    FROM fact_admission a
-    JOIN fact_discharge d ON a.spell_id = d.spell_id
-    GROUP BY a.patient_id, a.spell_id
+        admission.patient_id,
+        admission.spell_id,
+        MIN(admission.timestamp) AS admit_ts,
+        MIN(discharge.timestamp) AS discharge_ts
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.patient_id, admission.spell_id
 )
 SELECT
-    COUNT(DISTINCT s2.spell_id) AS readmissions,
+    COUNT(DISTINCT readmit.spell_id) AS readmissions,
     (SELECT COUNT(*) FROM spells) AS total_completed_spells,
-    ROUND(100.0 * COUNT(DISTINCT s2.spell_id)
+    ROUND(100.0 * COUNT(DISTINCT readmit.spell_id)
         / (SELECT COUNT(*) FROM spells), 1) AS readmission_pct
-FROM spells s1
-JOIN spells s2
-    ON s1.patient_id = s2.patient_id
-    AND s2.admit_ts > s1.discharge_ts
-    AND EXTRACT(EPOCH FROM (s2.admit_ts - s1.discharge_ts)) / 86400.0 <= 30;
+FROM spells prior
+JOIN spells readmit
+    ON prior.patient_id = readmit.patient_id
+    AND readmit.admit_ts > prior.discharge_ts
+    AND EXTRACT(EPOCH FROM (readmit.admit_ts - prior.discharge_ts)) / 86400.0 <= 30;
 ```
 
 | readmissions | total_completed_spells | readmission_pct |
 |--------------|------------------------|-----------------|
-| 78           | 1124                   | 6.9             |
+| 342          | 5403                   | 6.3             |
 
 
 ---
@@ -720,35 +753,37 @@ JOIN spells s2
 
 ```sql
 SELECT
-    f.patient_id,
-    p.primary_condition,
+    assessment.patient_id,
+    patient.primary_condition,
     SUM(proc.tariff) AS total_procedure_cost,
     COUNT(*) AS procedures_performed
-FROM fact_pre_op_assessment f
-JOIN dim_procedure proc ON f.procedure_id = proc.id
-JOIN dim_patient p ON f.patient_id = p.id AND p.valid_to IS NULL
-GROUP BY f.patient_id, p.primary_condition
-ORDER BY total_procedure_cost DESC
+FROM fact_pre_op_assessment assessment
+JOIN dim_procedure proc
+    ON assessment.procedure_id = proc.id
+JOIN dim_patient patient
+    ON assessment.patient_id = patient.id AND patient.valid_to IS NULL
+GROUP BY assessment.patient_id, patient.primary_condition
+ORDER BY total_procedure_cost DESC, assessment.patient_id
 LIMIT 15;
 ```
 
 | patient_id  | primary_condition | total_procedure_cost | procedures_performed |
 |-------------|-------------------|----------------------|----------------------|
-| PAT_0001957 | ortho             | 72300.0              | 10                   |
-| PAT_0003864 | ortho             | 67200.0              | 9                    |
-| PAT_0001941 | ortho             | 57900.0              | 7                    |
-| PAT_0000126 | cardiac           | 57250.0              | 8                    |
-| PAT_0003487 | ortho             | 53900.0              | 7                    |
-| PAT_0001395 | cardiac           | 53300.0              | 6                    |
-| PAT_0000766 | ortho             | 52700.0              | 6                    |
-| PAT_0003623 | ortho             | 52100.0              | 6                    |
-| PAT_0000943 | cardiac           | 50900.0              | 6                    |
-| PAT_0001951 | cardiac           | 49950.0              | 6                    |
-| PAT_0004892 | ortho             | 48700.0              | 7                    |
-| PAT_0002707 | ortho             | 47700.0              | 6                    |
-| PAT_0003978 | ortho             | 47300.0              | 6                    |
-| PAT_0001135 | cardiac           | 47150.0              | 5                    |
-| PAT_0003928 | ortho             | 46500.0              | 5                    |
+| PAT_0000210 | ortho             | 38400                | 4                    |
+| PAT_0000976 | cardiac           | 31600                | 5                    |
+| PAT_0001001 | infectious        | 31500                | 3                    |
+| PAT_0005178 | infectious        | 31500                | 3                    |
+| PAT_0006273 | respiratory       | 31500                | 3                    |
+| PAT_0006579 | ortho             | 31200                | 3                    |
+| PAT_0000401 | ortho             | 29000                | 4                    |
+| PAT_0000043 | GI                | 27900                | 4                    |
+| PAT_0003260 | ortho             | 27600                | 3                    |
+| PAT_0000491 | ortho             | 27200                | 3                    |
+| PAT_0000995 | cardiac           | 26500                | 2                    |
+| PAT_0002693 | cardiac           | 26500                | 2                    |
+| PAT_0010127 | cardiac           | 26500                | 2                    |
+| PAT_0005921 | ortho             | 25500                | 3                    |
+| PAT_0001080 | ortho             | 24200                | 3                    |
 
 
 ### Bed-day costs for completed spells
@@ -756,51 +791,54 @@ LIMIT 15;
 ```sql
 WITH spell_los AS (
     SELECT
-        a.patient_id,
-        a.spell_id,
-        MIN(a.timestamp) AS admit_ts,
-        MIN(d.timestamp) AS discharge_ts,
-        EXTRACT(EPOCH FROM (MIN(d.timestamp) - MIN(a.timestamp))) / 86400.0 AS los_days
-    FROM fact_admission a
-    JOIN fact_discharge d ON a.spell_id = d.spell_id
-    GROUP BY a.patient_id, a.spell_id
+        admission.patient_id,
+        admission.spell_id,
+        MIN(admission.timestamp) AS admit_ts,
+        MIN(discharge.timestamp) AS discharge_ts,
+        EXTRACT(EPOCH FROM (MIN(discharge.timestamp) - MIN(admission.timestamp))) / 86400.0 AS los_days
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.patient_id, admission.spell_id
 ),
 ward_costs AS (
     SELECT
-        wa.spell_id,
-        AVG(w.cost_per_bed_day) AS avg_bed_cost
-    FROM fact_ward_assignment wa
-    JOIN dim_ward w ON wa.ward_id = w.id
-    GROUP BY wa.spell_id
+        assignment.spell_id,
+        AVG(ward.cost_per_bed_day) AS avg_bed_cost
+    FROM fact_ward_assignment assignment
+    JOIN dim_ward ward
+        ON assignment.ward_id = ward.id
+    GROUP BY assignment.spell_id
 )
 SELECT
-    sl.patient_id,
-    ROUND(sl.los_days, 1) AS los_days,
-    ROUND(wc.avg_bed_cost, 0) AS avg_bed_cost_per_day,
-    ROUND(sl.los_days * wc.avg_bed_cost, 0) AS total_bed_cost
-FROM spell_los sl
-JOIN ward_costs wc ON sl.spell_id = wc.spell_id
+    spell.patient_id,
+    ROUND(spell.los_days, 1) AS los_days,
+    ROUND(cost.avg_bed_cost, 0) AS avg_bed_cost_per_day,
+    ROUND(spell.los_days * cost.avg_bed_cost, 0) AS total_bed_cost
+FROM spell_los spell
+JOIN ward_costs cost
+    ON spell.spell_id = cost.spell_id
 ORDER BY total_bed_cost DESC
 LIMIT 15;
 ```
 
 | patient_id  | los_days | avg_bed_cost_per_day | total_bed_cost |
 |-------------|----------|----------------------|----------------|
-| PAT_0001914 | 8.7      | 1800.0               | 15741.0        |
-| PAT_0000612 | 10.9     | 1375.0               | 14999.0        |
-| PAT_0001709 | 14.1     | 1050.0               | 14773.0        |
-| PAT_0002199 | 7.9      | 1800.0               | 14224.0        |
-| PAT_0002668 | 12.2     | 1100.0               | 13382.0        |
-| PAT_0002160 | 9.8      | 1350.0               | 13243.0        |
-| PAT_0001445 | 7.0      | 1800.0               | 12607.0        |
-| PAT_0002995 | 9.1      | 1375.0               | 12526.0        |
-| PAT_0004665 | 9.8      | 1220.0               | 11940.0        |
-| PAT_0002617 | 6.5      | 1800.0               | 11783.0        |
-| PAT_0003039 | 8.5      | 1375.0               | 11716.0        |
-| PAT_0001171 | 6.4      | 1800.0               | 11585.0        |
-| PAT_0001249 | 16.9     | 675.0                | 11407.0        |
-| PAT_0000101 | 8.0      | 1350.0               | 10825.0        |
-| PAT_0000181 | 6.0      | 1800.0               | 10747.0        |
+| PAT_0006030 | 13.5     | 1800                 | 24278          |
+| PAT_0011226 | 10.8     | 1800                 | 19357          |
+| PAT_0000624 | 10.7     | 1800                 | 19207          |
+| PAT_0002385 | 10.4     | 1800                 | 18810          |
+| PAT_0010880 | 10.3     | 1800                 | 18591          |
+| PAT_0011671 | 10.1     | 1800                 | 18155          |
+| PAT_0006316 | 10.1     | 1800                 | 18142          |
+| PAT_0010725 | 9.9      | 1800                 | 17767          |
+| PAT_0008334 | 9.8      | 1800                 | 17647          |
+| PAT_0004487 | 9.8      | 1800                 | 17638          |
+| PAT_0015530 | 9.8      | 1800                 | 17609          |
+| PAT_0014279 | 9.4      | 1800                 | 16955          |
+| PAT_0007965 | 9.3      | 1800                 | 16764          |
+| PAT_0013019 | 8.9      | 1800                 | 15982          |
+| PAT_0006435 | 8.9      | 1800                 | 15943          |
 
 
 ---
@@ -812,75 +850,84 @@ LIMIT 15;
 ```sql
 WITH spells AS (
     SELECT
-        a.patient_id,
-        a.spell_id,
-        MIN(a.timestamp) AS admit_ts,
-        MIN(d.timestamp) AS discharge_ts
-    FROM fact_admission a
-    JOIN fact_discharge d ON a.spell_id = d.spell_id
-    GROUP BY a.patient_id, a.spell_id
+        admission.patient_id,
+        admission.spell_id,
+        MIN(admission.timestamp) AS admit_ts,
+        MIN(discharge.timestamp) AS discharge_ts
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.patient_id, admission.spell_id
 )
 SELECT
-    p.imd_decile,
+    patient.imd_decile,
     COUNT(*) AS spells,
-    ROUND(AVG(EXTRACT(EPOCH FROM (s.discharge_ts - s.admit_ts)) / 86400.0), 1) AS avg_los
-FROM spells s
-JOIN dim_patient p ON s.patient_id = p.id AND p.valid_to IS NULL
-GROUP BY p.imd_decile
-ORDER BY p.imd_decile;
+    ROUND(AVG(EXTRACT(EPOCH FROM (spell.discharge_ts - spell.admit_ts)) / 86400.0), 1) AS avg_los
+FROM spells spell
+JOIN dim_patient patient
+    ON spell.patient_id = patient.id AND patient.valid_to IS NULL
+GROUP BY patient.imd_decile
+ORDER BY patient.imd_decile;
 ```
 
 | imd_decile | spells | avg_los |
 |------------|--------|---------|
-| 1          | 118    | 5.6     |
-| 2          | 126    | 5.4     |
-| 3          | 100    | 5.3     |
-| 4          | 114    | 5.4     |
-| 5          | 110    | 5.5     |
-| 6          | 108    | 5.4     |
-| 7          | 111    | 5.4     |
-| 8          | 109    | 5.4     |
-| 9          | 124    | 5.6     |
-| 10         | 104    | 5.3     |
+| 1          | 567    | 7.3     |
+| 2          | 522    | 7.4     |
+| 3          | 729    | 7.3     |
+| 4          | 850    | 5.3     |
+| 5          | 881    | 5.4     |
+| 6          | 767    | 5.3     |
+| 7          | 458    | 5.3     |
+| 8          | 332    | 4.3     |
+| 9          | 178    | 4.3     |
+| 10         | 119    | 4.3     |
 
 
 ### Referral-to-attendance ratio by deprivation
 
 ```sql
-WITH referrals AS (
-    SELECT r.patient_id, COUNT(DISTINCT r.pathway_id) AS ref_count
-    FROM fact_referral_created r
-    GROUP BY r.patient_id
+WITH referral_counts AS (
+    SELECT
+        referral.patient_id,
+        COUNT(DISTINCT referral.pathway_id) AS ref_count
+    FROM fact_referral_created referral
+    GROUP BY referral.patient_id
 ),
-attended AS (
-    SELECT a.patient_id, COUNT(DISTINCT a.pathway_id) AS att_count
-    FROM fact_appointment_attended a
-    GROUP BY a.patient_id
+attendance_counts AS (
+    SELECT
+        appointment.patient_id,
+        COUNT(DISTINCT appointment.pathway_id) AS att_count
+    FROM fact_appointment_attended appointment
+    GROUP BY appointment.patient_id
 )
 SELECT
-    p.imd_decile,
-    SUM(r.ref_count) AS referrals,
-    COALESCE(SUM(a.att_count), 0) AS attended,
-    ROUND(100.0 * COALESCE(SUM(a.att_count), 0) / SUM(r.ref_count), 1) AS attendance_pct
-FROM referrals r
-JOIN dim_patient p ON r.patient_id = p.id AND p.valid_to IS NULL
-LEFT JOIN attended a ON r.patient_id = a.patient_id
-GROUP BY p.imd_decile
-ORDER BY p.imd_decile;
+    patient.imd_decile,
+    SUM(referral_counts.ref_count) AS referrals,
+    COALESCE(SUM(attendance_counts.att_count), 0) AS attended,
+    ROUND(100.0 * COALESCE(SUM(attendance_counts.att_count), 0)
+        / SUM(referral_counts.ref_count), 1) AS attendance_pct
+FROM referral_counts
+JOIN dim_patient patient
+    ON referral_counts.patient_id = patient.id AND patient.valid_to IS NULL
+LEFT JOIN attendance_counts
+    ON referral_counts.patient_id = attendance_counts.patient_id
+GROUP BY patient.imd_decile
+ORDER BY patient.imd_decile;
 ```
 
 | imd_decile | referrals | attended | attendance_pct |
 |------------|-----------|----------|----------------|
-| 1          | 306       | 233      | 76.1           |
-| 2          | 301       | 241      | 80.1           |
-| 3          | 302       | 239      | 79.1           |
-| 4          | 357       | 278      | 77.9           |
-| 5          | 356       | 288      | 80.9           |
-| 6          | 320       | 255      | 79.7           |
-| 7          | 339       | 281      | 82.9           |
-| 8          | 333       | 269      | 80.8           |
-| 9          | 337       | 262      | 77.7           |
-| 10         | 291       | 222      | 76.3           |
+| 1          | 1191      | 460      | 38.6           |
+| 2          | 897       | 338      | 37.7           |
+| 3          | 1240      | 495      | 39.9           |
+| 4          | 1512      | 604      | 39.9           |
+| 5          | 1433      | 603      | 42.1           |
+| 6          | 1330      | 483      | 36.3           |
+| 7          | 909       | 342      | 37.6           |
+| 8          | 612       | 262      | 42.8           |
+| 9          | 291       | 115      | 39.5           |
+| 10         | 196       | 74       | 37.8           |
 
 
 ---
@@ -912,58 +959,62 @@ monthly_surgeries AS (
     FROM fact_surgery_performed GROUP BY month
 )
 SELECT
-    e.month,
-    e.ed_arrivals,
-    COALESCE(a.admissions, 0) AS admissions,
-    COALESCE(d.discharges, 0) AS discharges,
-    COALESCE(i.icu_events, 0) AS icu_events,
-    COALESCE(s.surgeries, 0) AS surgeries
-FROM monthly_ed e
-LEFT JOIN monthly_admits a ON e.month = a.month
-LEFT JOIN monthly_discharges d ON e.month = d.month
-LEFT JOIN monthly_icu i ON e.month = i.month
-LEFT JOIN monthly_surgeries s ON e.month = s.month
-ORDER BY e.month;
+    monthly_ed.month,
+    monthly_ed.ed_arrivals,
+    COALESCE(monthly_admits.admissions, 0) AS admissions,
+    COALESCE(monthly_discharges.discharges, 0) AS discharges,
+    COALESCE(monthly_icu.icu_events, 0) AS icu_events,
+    COALESCE(monthly_surgeries.surgeries, 0) AS surgeries
+FROM monthly_ed
+LEFT JOIN monthly_admits
+    ON monthly_ed.month = monthly_admits.month
+LEFT JOIN monthly_discharges
+    ON monthly_ed.month = monthly_discharges.month
+LEFT JOIN monthly_icu
+    ON monthly_ed.month = monthly_icu.month
+LEFT JOIN monthly_surgeries
+    ON monthly_ed.month = monthly_surgeries.month
+ORDER BY monthly_ed.month;
 ```
 
 | month      | ed_arrivals | admissions | discharges | icu_events | surgeries |
 |------------|-------------|------------|------------|------------|-----------|
-| 2023-01-01 | 74          | 30         | 15         | 0          | 0         |
-| 2023-02-01 | 43          | 23         | 12         | 6          | 2         |
-| 2023-03-01 | 52          | 45         | 21         | 8          | 43        |
-| 2023-04-01 | 64          | 57         | 37         | 7          | 79        |
-| 2023-05-01 | 47          | 37         | 25         | 4          | 90        |
-| 2023-06-01 | 48          | 50         | 26         | 6          | 107       |
-| 2023-07-01 | 51          | 42         | 27         | 0          | 109       |
-| 2023-08-01 | 50          | 42         | 27         | 0          | 127       |
-| 2023-09-01 | 61          | 47         | 24         | 9          | 79        |
-| 2023-10-01 | 53          | 47         | 29         | 8          | 90        |
-| 2023-11-01 | 36          | 42         | 26         | 0          | 137       |
-| 2023-12-01 | 60          | 45         | 26         | 3          | 94        |
-| 2024-01-01 | 58          | 47         | 34         | 11         | 130       |
-| 2024-02-01 | 55          | 41         | 24         | 0          | 143       |
-| 2024-03-01 | 57          | 61         | 35         | 7          | 135       |
-| 2024-04-01 | 51          | 54         | 38         | 5          | 144       |
-| 2024-05-01 | 50          | 48         | 28         | 9          | 111       |
-| 2024-06-01 | 50          | 47         | 30         | 10         | 149       |
-| 2024-07-01 | 65          | 51         | 26         | 13         | 130       |
-| 2024-08-01 | 61          | 52         | 30         | 6          | 165       |
-| 2024-09-01 | 65          | 51         | 34         | 0          | 153       |
-| 2024-10-01 | 38          | 45         | 29         | 6          | 172       |
-| 2024-11-01 | 90          | 63         | 43         | 9          | 119       |
-| 2024-12-01 | 85          | 68         | 39         | 22         | 133       |
-| 2025-01-01 | 65          | 52         | 30         | 9          | 140       |
-| 2025-02-01 | 91          | 75         | 32         | 2          | 124       |
-| 2025-03-01 | 98          | 75         | 52         | 13         | 124       |
-| 2025-04-01 | 55          | 68         | 43         | 8          | 147       |
-| 2025-05-01 | 70          | 61         | 40         | 12         | 176       |
-| 2025-06-01 | 53          | 63         | 37         | 21         | 194       |
-| 2025-07-01 | 64          | 76         | 53         | 11         | 205       |
-| 2025-08-01 | 62          | 49         | 30         | 3          | 130       |
-| 2025-09-01 | 63          | 58         | 32         | 7          | 119       |
-| 2025-10-01 | 61          | 60         | 39         | 10         | 165       |
-| 2025-11-01 | 61          | 55         | 34         | 9          | 141       |
-| 2025-12-01 | 63          | 38         | 17         | 8          | 128       |
+| 2023-01-01 | 216         | 75         | 42         | 4          | 0         |
+| 2023-02-01 | 185         | 94         | 61         | 5          | 9         |
+| 2023-03-01 | 159         | 110        | 75         | 6          | 24        |
+| 2023-04-01 | 168         | 134        | 84         | 6          | 31        |
+| 2023-05-01 | 163         | 137        | 91         | 9          | 55        |
+| 2023-06-01 | 176         | 117        | 78         | 6          | 49        |
+| 2023-07-01 | 190         | 136        | 95         | 4          | 49        |
+| 2023-08-01 | 194         | 145        | 83         | 3          | 62        |
+| 2023-09-01 | 197         | 155        | 107        | 8          | 59        |
+| 2023-10-01 | 210         | 155        | 111        | 8          | 75        |
+| 2023-11-01 | 254         | 199        | 121        | 12         | 68        |
+| 2023-12-01 | 272         | 179        | 124        | 9          | 78        |
+| 2024-01-01 | 288         | 231        | 147        | 12         | 83        |
+| 2024-02-01 | 249         | 191        | 135        | 8          | 73        |
+| 2024-03-01 | 311         | 245        | 153        | 13         | 86        |
+| 2024-04-01 | 235         | 203        | 138        | 18         | 92        |
+| 2024-05-01 | 278         | 212        | 135        | 11         | 102       |
+| 2024-06-01 | 282         | 212        | 138        | 16         | 87        |
+| 2024-07-01 | 296         | 217        | 161        | 16         | 90        |
+| 2024-08-01 | 276         | 223        | 133        | 8          | 97        |
+| 2024-09-01 | 315         | 220        | 149        | 15         | 99        |
+| 2024-10-01 | 294         | 246        | 164        | 12         | 98        |
+| 2024-11-01 | 300         | 252        | 161        | 12         | 102       |
+| 2024-12-01 | 384         | 263        | 163        | 12         | 104       |
+| 2025-01-01 | 388         | 304        | 202        | 25         | 112       |
+| 2025-02-01 | 364         | 292        | 195        | 10         | 110       |
+| 2025-03-01 | 382         | 328        | 239        | 26         | 141       |
+| 2025-04-01 | 372         | 337        | 243        | 19         | 163       |
+| 2025-05-01 | 408         | 285        | 174        | 15         | 129       |
+| 2025-06-01 | 379         | 276        | 188        | 16         | 151       |
+| 2025-07-01 | 378         | 318        | 210        | 12         | 151       |
+| 2025-08-01 | 411         | 311        | 187        | 20         | 150       |
+| 2025-09-01 | 398         | 329        | 226        | 25         | 149       |
+| 2025-10-01 | 413         | 317        | 218        | 12         | 121       |
+| 2025-11-01 | 436         | 319        | 227        | 18         | 143       |
+| 2025-12-01 | 479         | 361        | 245        | 21         | 166       |
 
 
 ### Daily ED arrivals to spot spikes
@@ -974,22 +1025,22 @@ SELECT
     COUNT(*) AS arrivals
 FROM fact_ed_arrival
 GROUP BY day
-ORDER BY arrivals DESC
+ORDER BY arrivals DESC, day
 LIMIT 10;
 ```
 
 | day        | arrivals |
 |------------|----------|
-| 2023-01-01 | 30       |
-| 2024-11-01 | 8        |
-| 2024-12-09 | 8        |
-| 2024-06-24 | 7        |
-| 2024-07-03 | 7        |
-| 2024-08-01 | 7        |
-| 2025-02-19 | 7        |
-| 2025-02-25 | 7        |
-| 2025-03-17 | 7        |
-| 2025-09-23 | 7        |
+| 2023-01-01 | 41       |
+| 2025-12-23 | 26       |
+| 2024-12-30 | 25       |
+| 2025-03-10 | 25       |
+| 2025-06-25 | 25       |
+| 2025-12-09 | 25       |
+| 2025-05-15 | 24       |
+| 2024-03-29 | 23       |
+| 2025-11-24 | 23       |
+| 2025-12-29 | 23       |
 
 
 ### Winter vs summer by year
@@ -1016,122 +1067,82 @@ ORDER BY yr, season;
 
 | yr   | season | total_ed | avg_monthly_ed |
 |------|--------|----------|----------------|
-| 2023 | summer | 374      | 53.0           |
-| 2023 | winter | 265      | 53.0           |
-| 2024 | summer | 380      | 54.0           |
-| 2024 | winter | 345      | 69.0           |
-| 2025 | summer | 428      | 61.0           |
-| 2025 | winter | 378      | 76.0           |
+| 2023 | summer | 1298     | 185            |
+| 2023 | winter | 1086     | 217            |
+| 2024 | summer | 1976     | 282            |
+| 2024 | winter | 1532     | 306            |
+| 2025 | summer | 2759     | 394            |
+| 2025 | winter | 2049     | 410            |
 
 
 ---
 
-## Exercise 18: "Something looks wrong with the survey data."
-
-### Score distribution
-
-```sql
-SELECT
-    recommendation_score,
-    COUNT(*) AS responses,
-    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS pct
-FROM fact_fft_response
-GROUP BY recommendation_score
-ORDER BY recommendation_score;
-```
-
-| recommendation_score | responses | pct  |
-|----------------------|-----------|------|
-| 1                    | 332       | 35.2 |
-| 2                    | 423       | 44.8 |
-| 3                    | 165       | 17.5 |
-| 4                    | 23        | 2.4  |
-| 5                    | 1         | 0.1  |
-
-
-### Affected records
-
-```sql
-SELECT
-    COUNT(*) AS total_responses,
-    SUM(CASE WHEN recommendation_score > 5 THEN 1 ELSE 0 END) AS invalid_scores,
-    SUM(CASE WHEN recommendation_score < 4 THEN 1 ELSE 0 END) AS negative_responses
-FROM fact_fft_response;
-```
-
-| total_responses | invalid_scores | negative_responses |
-|-----------------|----------------|--------------------|
-| 944             | 0              | 920                |
-
-
-
-
----
-
-## Exercise 19: "The Finance Director wants to know our surgical revenue."
+## Exercise 18: "The Finance Director wants to know our surgical income."
 
 ### Theatre utilisation
 
 ```sql
 SELECT
-    t.theatre_name,
-    t.specialty,
+    theatre.theatre_name,
+    theatre.specialty,
     COUNT(*) AS surgeries,
     ROUND(COUNT(*) * 1.0 / DATEDIFF('day',
         (SELECT MIN(timestamp) FROM fact_surgery_performed),
         (SELECT MAX(timestamp) FROM fact_surgery_performed)
     ), 1) AS per_day
-FROM fact_surgery_performed sp
-JOIN dim_theatre t ON sp.theatre_id = t.id
-GROUP BY t.theatre_name, t.specialty
+FROM fact_surgery_performed surgery
+JOIN dim_theatre theatre
+    ON surgery.theatre_id = theatre.id
+GROUP BY theatre.theatre_name, theatre.specialty
 ORDER BY surgeries DESC;
 ```
 
 | theatre_name        | specialty                    | surgeries | per_day |
 |---------------------|------------------------------|-----------|---------|
-| Main Theatre 1      | General Surgery              | 928       | 0.9     |
-| Main Theatre 2      | Trauma & Orthopaedics        | 905       | 0.9     |
-| Day Surgery Theatre | General / Mixed              | 887       | 0.9     |
-| Cardiac Theatre     | Cardiology / Cardiac Surgery | 866       | 0.8     |
-| Obstetric Theatre   | Obstetrics                   | 848       | 0.8     |
+| Main Theatre 1      | General Surgery              | 702       | 0.7     |
+| Day Surgery Theatre | General / Mixed              | 698       | 0.7     |
+| Cardiac Theatre     | Cardiology / Cardiac Surgery | 666       | 0.6     |
+| Main Theatre 2      | Trauma & Orthopaedics        | 666       | 0.6     |
+| Obstetric Theatre   | Obstetrics                   | 626       | 0.6     |
 
 
-### Revenue by procedure complexity
+### Income by procedure complexity
 
 ```sql
 WITH surgery_procedures AS (
     SELECT
-        sp.surgical_episode_id,
+        surgery.surgical_episode_id,
         proc.procedure_name,
         proc.complexity,
         proc.tariff,
         proc.specialty_group
-    FROM fact_surgery_performed sp
-    JOIN fact_pre_op_assessment po
-        ON sp.surgical_episode_id = po.surgical_episode_id
-    JOIN dim_procedure proc ON po.procedure_id = proc.id
+    FROM fact_surgery_performed surgery
+    JOIN fact_pre_op_assessment pre_op
+        ON surgery.surgical_episode_id = pre_op.surgical_episode_id
+    JOIN dim_procedure proc
+        ON pre_op.procedure_id = proc.id
 )
 SELECT
     complexity,
     COUNT(*) AS surgeries,
     ROUND(AVG(tariff), 0) AS avg_tariff,
-    SUM(tariff) AS total_revenue
+    SUM(tariff) AS total_income
 FROM surgery_procedures
 GROUP BY complexity
-ORDER BY total_revenue DESC;
+ORDER BY total_income DESC;
 ```
 
-| complexity | surgeries | avg_tariff | total_revenue |
-|------------|-----------|------------|---------------|
-| complex    | 1475      | 11049.0    | 16297100.0    |
-| major      | 1924      | 6463.0     | 12433900.0    |
-| moderate   | 2117      | 1978.0     | 4187800.0     |
-| minor      | 1557      | 659.0      | 1026550.0     |
+| complexity | surgeries | avg_tariff | total_income |
+|------------|-----------|------------|--------------|
+| complex    | 344       | 11020      | 3791000      |
+| major      | 470       | 6148       | 2889500      |
+| moderate   | 510       | 1984       | 1012000      |
+| minor      | 372       | 659        | 245150       |
 
 
 ---
 
-## Exercise 20: "Are we keeping patients, or just cycling through them?"
+## Exercise 19: "Are we keeping patients, or just cycling through them?"
 
 ### Inpatient spells per patient
 
@@ -1140,7 +1151,9 @@ SELECT
     spells_per_patient,
     COUNT(*) AS patients
 FROM (
-    SELECT patient_id, COUNT(DISTINCT spell_id) AS spells_per_patient
+    SELECT
+        patient_id,
+        COUNT(DISTINCT spell_id) AS spells_per_patient
     FROM fact_admission
     GROUP BY patient_id
 )
@@ -1150,11 +1163,14 @@ ORDER BY spells_per_patient;
 
 | spells_per_patient | patients |
 |--------------------|----------|
-| 1                  | 1234     |
-| 2                  | 250      |
-| 3                  | 24       |
-| 4                  | 5        |
-| 5                  | 2        |
+| 1                  | 3810     |
+| 2                  | 1130     |
+| 3                  | 347      |
+| 4                  | 130      |
+| 5                  | 65       |
+| 6                  | 19       |
+| 7                  | 6        |
+| 8                  | 2        |
 
 
 ### Most complex patients (multi-pathway)
@@ -1177,105 +1193,139 @@ SELECT
     COUNT(DISTINCT pathway) AS pathway_types
 FROM patient_journeys
 GROUP BY patient_id
-ORDER BY total_journeys DESC
+ORDER BY total_journeys DESC, patient_id
 LIMIT 15;
 ```
 
 | patient_id  | total_journeys | pathway_types |
 |-------------|----------------|---------------|
-| PAT_0000612 | 9              | 3             |
-| PAT_0000115 | 9              | 3             |
-| PAT_0001866 | 8              | 3             |
-| PAT_0003438 | 7              | 3             |
-| PAT_0000521 | 7              | 3             |
-| PAT_0001748 | 7              | 3             |
-| PAT_0002119 | 7              | 3             |
-| PAT_0002242 | 7              | 3             |
-| PAT_0003091 | 7              | 3             |
-| PAT_0000605 | 7              | 3             |
-| PAT_0000260 | 7              | 3             |
-| PAT_0001941 | 7              | 3             |
-| PAT_0001914 | 7              | 3             |
-| PAT_0000042 | 7              | 3             |
-| PAT_0003762 | 6              | 3             |
+| PAT_0000401 | 16             | 3             |
+| PAT_0000043 | 14             | 3             |
+| PAT_0000976 | 14             | 3             |
+| PAT_0001080 | 13             | 3             |
+| PAT_0003231 | 13             | 3             |
+| PAT_0004053 | 13             | 3             |
+| PAT_0007411 | 13             | 3             |
+| PAT_0000210 | 12             | 3             |
+| PAT_0000499 | 12             | 3             |
+| PAT_0001633 | 12             | 3             |
+| PAT_0002664 | 12             | 3             |
+| PAT_0003847 | 12             | 3             |
+| PAT_0004945 | 12             | 3             |
+| PAT_0005386 | 12             | 3             |
+| PAT_0005387 | 12             | 3             |
 
 
 ### Condition profile of high-frequency patients
 
 ```sql
 WITH patient_spells AS (
-    SELECT patient_id, COUNT(DISTINCT spell_id) AS spell_count
+    SELECT
+        patient_id,
+        COUNT(DISTINCT spell_id) AS spell_count
     FROM fact_admission
     GROUP BY patient_id
     HAVING COUNT(DISTINCT spell_id) >= 3
 )
 SELECT
-    p.primary_condition,
-    p.comorbidity_count,
-    AVG(ps.spell_count) AS avg_spells,
+    patient.primary_condition,
+    patient.comorbidity_count,
+    AVG(patient_spells.spell_count) AS avg_spells,
     COUNT(*) AS patients
-FROM patient_spells ps
-JOIN dim_patient p ON ps.patient_id = p.id AND p.valid_to IS NULL
-GROUP BY p.primary_condition, p.comorbidity_count
+FROM patient_spells
+JOIN dim_patient patient
+    ON patient_spells.patient_id = patient.id AND patient.valid_to IS NULL
+GROUP BY patient.primary_condition, patient.comorbidity_count
 ORDER BY avg_spells DESC;
 ```
 
-| primary_condition | comorbidity_count | avg_spells         | patients |
-|-------------------|-------------------|--------------------|----------|
-| GI                | 4                 | 5.0                | 1        |
-| infectious        | 4                 | 5.0                | 1        |
-| infectious        | 3                 | 4.0                | 1        |
-| neuro             | 1                 | 4.0                | 1        |
-| respiratory       | 0                 | 3.5                | 2        |
-| cardiac           | 1                 | 3.5                | 2        |
-| respiratory       | 3                 | 3.3333333333333335 | 3        |
-| obstetric         | 3                 | 3.0                | 2        |
-| neuro             | 3                 | 3.0                | 2        |
-| ortho             | 6                 | 3.0                | 2        |
-| cardiac           | 4                 | 3.0                | 1        |
-| respiratory       | 1                 | 3.0                | 3        |
-| ortho             | 1                 | 3.0                | 2        |
-| neuro             | 6                 | 3.0                | 1        |
-| ortho             | 3                 | 3.0                | 3        |
-| cardiac           | 3                 | 3.0                | 1        |
-| ortho             | 2                 | 3.0                | 1        |
-| GI                | 6                 | 3.0                | 1        |
-| neuro             | 0                 | 3.0                | 1        |
+| primary_condition | comorbidity_count | avg_spells | patients |
+|-------------------|-------------------|------------|----------|
+| ortho             | 4                 | 4.3333     | 12       |
+| neuro             | 0                 | 4.1667     | 12       |
+| cardiac           | 4                 | 4.1667     | 6        |
+| obstetric         | 3                 | 4.1111     | 9        |
+| ortho             | 6                 | 4          | 1        |
+| infectious        | 4                 | 4          | 4        |
+| GI                | 6                 | 4          | 1        |
+| ortho             | 5                 | 4          | 2        |
+| ortho             | 0                 | 4          | 10       |
+| respiratory       | 6                 | 4          | 1        |
+| GI                | 8                 | 4          | 1        |
+| ortho             | 1                 | 3.9091     | 22       |
+| neuro             | 4                 | 3.875      | 8        |
+| obstetric         | 2                 | 3.8571     | 7        |
+| GI                | 3                 | 3.8261     | 23       |
+| infectious        | 2                 | 3.8235     | 17       |
+| ortho             | 3                 | 3.8182     | 11       |
+| GI                | 5                 | 3.8        | 5        |
+| respiratory       | 0                 | 3.7692     | 13       |
+| respiratory       | 4                 | 3.75       | 4        |
+| cardiac           | 3                 | 3.72       | 25       |
+| obstetric         | 1                 | 3.7143     | 14       |
+| cardiac           | 1                 | 3.6857     | 35       |
+| infectious        | 0                 | 3.6667     | 9        |
+| neuro             | 5                 | 3.6667     | 3        |
+| infectious        | 3                 | 3.6667     | 6        |
+| respiratory       | 3                 | 3.6        | 10       |
+| ortho             | 2                 | 3.5556     | 18       |
+| neuro             | 3                 | 3.5385     | 13       |
+| GI                | 2                 | 3.5263     | 19       |
+| obstetric         | 4                 | 3.5        | 4        |
+| GI                | 0                 | 3.5        | 12       |
+| GI                | 1                 | 3.4783     | 23       |
+| neuro             | 1                 | 3.4737     | 19       |
+| neuro             | 2                 | 3.4643     | 28       |
+| GI                | 4                 | 3.4        | 10       |
+| cardiac           | 2                 | 3.3929     | 28       |
+| respiratory       | 2                 | 3.3793     | 29       |
+| obstetric         | 0                 | 3.3636     | 11       |
+| infectious        | 1                 | 3.35       | 20       |
+| respiratory       | 1                 | 3.3448     | 29       |
+| infectious        | 5                 | 3.3333     | 3        |
+| cardiac           | 0                 | 3.2778     | 18       |
+| cardiac           | 5                 | 3.25       | 4        |
+| GI                | 7                 | 3          | 1        |
+| respiratory       | 5                 | 3          | 3        |
+| neuro             | 6                 | 3          | 2        |
+| cardiac           | 6                 | 3          | 1        |
+| infectious        | 6                 | 3          | 1        |
+| obstetric         | 5                 | 3          | 2        |
 
 
 ---
 
-## Exercise 21: "Are we getting better or worse?"
+## Exercise 20: "Are we getting better or worse?"
 
 ### A&E 4-hour performance by quarter
 
 ```sql
 SELECT
-    DATE_TRUNC('quarter', arr.timestamp)::DATE AS quarter,
+    DATE_TRUNC('quarter', arrival.timestamp)::DATE AS quarter,
     COUNT(*) AS assessed,
-    ROUND(100.0 * SUM(CASE WHEN EXTRACT(EPOCH FROM (ea.timestamp - arr.timestamp)) / 60 <= 240
+    ROUND(100.0 * SUM(CASE WHEN EXTRACT(EPOCH FROM (assessment.timestamp - arrival.timestamp)) / 60 <= 240
         THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_within_4h
-FROM fact_ed_arrival arr
-JOIN fact_ed_assessment ea
-    ON arr.attendance_id = ea.attendance_id
+FROM fact_ed_arrival arrival
+JOIN fact_ed_assessment assessment
+    ON arrival.attendance_id = assessment.attendance_id
 GROUP BY quarter
 ORDER BY quarter;
 ```
 
 | quarter    | assessed | pct_within_4h |
 |------------|----------|---------------|
-| 2023-01-01 | 161      | 88.8          |
-| 2023-04-01 | 152      | 86.2          |
-| 2023-07-01 | 151      | 88.7          |
-| 2023-10-01 | 142      | 81.7          |
-| 2024-01-01 | 161      | 87.6          |
-| 2024-04-01 | 138      | 86.2          |
-| 2024-07-01 | 183      | 89.6          |
-| 2024-10-01 | 202      | 85.1          |
-| 2025-01-01 | 244      | 82.8          |
-| 2025-04-01 | 169      | 84.6          |
-| 2025-07-01 | 175      | 82.9          |
-| 2025-10-01 | 178      | 83.1          |
+| 2023-01-01 | 532      | 82.9          |
+| 2023-04-01 | 486      | 85.4          |
+| 2023-07-01 | 547      | 81.5          |
+| 2023-10-01 | 700      | 83.7          |
+| 2024-01-01 | 810      | 84.4          |
+| 2024-04-01 | 743      | 83            |
+| 2024-07-01 | 846      | 83.8          |
+| 2024-10-01 | 942      | 83.7          |
+| 2025-01-01 | 1071     | 83.8          |
+| 2025-04-01 | 1108     | 84            |
+| 2025-07-01 | 1125     | 84.9          |
+| 2025-10-01 | 1264     | 85.8          |
 
 
 ### Cancer 28-day FDS by quarter
@@ -1283,17 +1333,17 @@ ORDER BY quarter;
 ```sql
 WITH cancer_times AS (
     SELECT
-        cr.cancer_pathway_id,
-        MIN(cr.timestamp) AS referral_ts,
-        MIN(fs.timestamp) AS first_seen_ts
-    FROM fact_cancer_referral cr
-    JOIN fact_cancer_first_seen fs
-        ON cr.cancer_pathway_id = fs.cancer_pathway_id
-    GROUP BY cr.cancer_pathway_id
+        referral.cancer_pathway_id,
+        MIN(referral.timestamp) AS referral_ts,
+        MIN(first_seen.timestamp) AS first_seen_ts
+    FROM fact_cancer_referral referral
+    JOIN fact_cancer_first_seen first_seen
+        ON referral.cancer_pathway_id = first_seen.cancer_pathway_id
+    GROUP BY referral.cancer_pathway_id
 )
 SELECT
     DATE_TRUNC('quarter', referral_ts)::DATE AS quarter,
-    COUNT(*) AS journeys,
+    COUNT(*) AS pathways,
     ROUND(100.0 * SUM(CASE WHEN EXTRACT(EPOCH FROM (first_seen_ts - referral_ts)) / 86400.0 <= 28
         THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_fds
 FROM cancer_times
@@ -1301,20 +1351,20 @@ GROUP BY quarter
 ORDER BY quarter;
 ```
 
-| quarter    | journeys | pct_fds |
+| quarter    | pathways | pct_fds |
 |------------|----------|---------|
-| 2023-01-01 | 61       | 72.1    |
-| 2023-04-01 | 47       | 72.3    |
-| 2023-07-01 | 38       | 84.2    |
-| 2023-10-01 | 38       | 68.4    |
-| 2024-01-01 | 51       | 70.6    |
-| 2024-04-01 | 44       | 72.7    |
-| 2024-07-01 | 45       | 75.6    |
-| 2024-10-01 | 60       | 71.7    |
-| 2025-01-01 | 75       | 69.3    |
-| 2025-04-01 | 56       | 75.0    |
-| 2025-07-01 | 52       | 86.5    |
-| 2025-10-01 | 38       | 84.2    |
+| 2023-01-01 | 36       | 97.2    |
+| 2023-04-01 | 40       | 100     |
+| 2023-07-01 | 37       | 100     |
+| 2023-10-01 | 37       | 94.6    |
+| 2024-01-01 | 62       | 96.8    |
+| 2024-04-01 | 50       | 94      |
+| 2024-07-01 | 54       | 94.4    |
+| 2024-10-01 | 80       | 100     |
+| 2025-01-01 | 85       | 97.6    |
+| 2025-04-01 | 67       | 92.5    |
+| 2025-07-01 | 81       | 97.5    |
+| 2025-10-01 | 97       | 99      |
 
 
 ### Diagnostic 6-week compliance by quarter
@@ -1322,13 +1372,13 @@ ORDER BY quarter;
 ```sql
 WITH diag_times AS (
     SELECT
-        do2.request_id,
-        MIN(do2.timestamp) AS ordered_ts,
-        MIN(dp.timestamp) AS performed_ts
-    FROM fact_diagnostic_ordered do2
-    JOIN fact_diagnostic_performed dp
-        ON do2.request_id = dp.request_id
-    GROUP BY do2.request_id
+        ordered.request_id,
+        MIN(ordered.timestamp) AS ordered_ts,
+        MIN(performed.timestamp) AS performed_ts
+    FROM fact_diagnostic_ordered ordered
+    JOIN fact_diagnostic_performed performed
+        ON ordered.request_id = performed.request_id
+    GROUP BY ordered.request_id
 )
 SELECT
     DATE_TRUNC('quarter', ordered_ts)::DATE AS quarter,
@@ -1342,23 +1392,23 @@ ORDER BY quarter;
 
 | quarter    | tests_completed | pct_within_6wk |
 |------------|-----------------|----------------|
-| 2023-01-01 | 41              | 80.5           |
-| 2023-04-01 | 72              | 86.1           |
-| 2023-07-01 | 108             | 80.6           |
-| 2023-10-01 | 105             | 79.0           |
-| 2024-01-01 | 103             | 87.4           |
-| 2024-04-01 | 134             | 81.3           |
-| 2024-07-01 | 105             | 86.7           |
-| 2024-10-01 | 115             | 75.7           |
-| 2025-01-01 | 143             | 83.2           |
-| 2025-04-01 | 156             | 79.5           |
-| 2025-07-01 | 145             | 75.2           |
-| 2025-10-01 | 76              | 92.1           |
+| 2023-01-01 | 34              | 100            |
+| 2023-04-01 | 60              | 98.3           |
+| 2023-07-01 | 79              | 97.5           |
+| 2023-10-01 | 75              | 98.7           |
+| 2024-01-01 | 107             | 98.1           |
+| 2024-04-01 | 138             | 93.5           |
+| 2024-07-01 | 130             | 96.9           |
+| 2024-10-01 | 140             | 94.3           |
+| 2025-01-01 | 144             | 95.1           |
+| 2025-04-01 | 179             | 98.3           |
+| 2025-07-01 | 140             | 98.6           |
+| 2025-10-01 | 145             | 97.9           |
 
 
 ---
 
-## Exercise 22: "Do our patients come back?"
+## Exercise 21: "Do our patients come back?"
 
 ### Build the 2023 cohort and track across years
 
@@ -1377,7 +1427,9 @@ WITH all_activity AS (
     SELECT patient_id, timestamp FROM fact_appointment_attended
 ),
 first_activity AS (
-    SELECT patient_id, MIN(timestamp) AS first_ts
+    SELECT
+        patient_id,
+        MIN(timestamp) AS first_ts
     FROM all_activity
     GROUP BY patient_id
 ),
@@ -1387,19 +1439,20 @@ cohort_2023 AS (
     WHERE EXTRACT(YEAR FROM first_ts) = 2023
 )
 SELECT
-    EXTRACT(YEAR FROM a.timestamp)::INTEGER AS activity_year,
-    COUNT(DISTINCT a.patient_id) AS patients_active
-FROM all_activity a
-JOIN cohort_2023 c ON a.patient_id = c.patient_id
+    EXTRACT(YEAR FROM activity.timestamp)::INTEGER AS activity_year,
+    COUNT(DISTINCT activity.patient_id) AS patients_active
+FROM all_activity activity
+JOIN cohort_2023 cohort
+    ON activity.patient_id = cohort.patient_id
 GROUP BY activity_year
 ORDER BY activity_year;
 ```
 
 | activity_year | patients_active |
 |---------------|-----------------|
-| 2023          | 1772            |
-| 2024          | 519             |
-| 2025          | 201             |
+| 2023          | 4575            |
+| 2024          | 2345            |
+| 2025          | 2162            |
 
 
 ---

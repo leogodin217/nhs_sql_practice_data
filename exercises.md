@@ -111,7 +111,12 @@ A new analyst just joined the team. Help them get oriented -- what resources doe
 **Ward summary:**
 
 ```sql
-SELECT ward_name, ward_type, department, total_beds, cost_per_bed_day
+SELECT
+    ward_name,
+    ward_type,
+    department,
+    total_beds,
+    cost_per_bed_day
 FROM dim_ward
 ORDER BY total_beds DESC;
 ```
@@ -119,7 +124,10 @@ ORDER BY total_beds DESC;
 **Consultant summary:**
 
 ```sql
-SELECT specialty_group, grade, COUNT(*) AS consultants
+SELECT
+    specialty_group,
+    grade,
+    COUNT(*) AS consultants
 FROM dim_consultant
 GROUP BY specialty_group, grade
 ORDER BY specialty_group, grade;
@@ -128,7 +136,10 @@ ORDER BY specialty_group, grade;
 **Theatre summary:**
 
 ```sql
-SELECT theatre_name, specialty, sessions_per_day
+SELECT
+    theatre_name,
+    specialty,
+    sessions_per_day
 FROM dim_theatre;
 ```
 
@@ -146,7 +157,7 @@ ORDER BY table_name;
 <details>
 <summary>Discussion</summary>
 
-The trust has 10 wards (75 beds total), 25 consultants (5 per specialty group, 3 grades each), 5 operating theatres, 12 diagnostic test types, 35 surgical procedures, and 30 medications.
+The trust has 10 wards (75 beds total), 25 consultants across 5 specialty groups (with respiratory the largest at 7 and musculoskeletal the smallest at 3 -- not every group has all three grades), 5 operating theatres, 12 diagnostic test types, 35 surgical procedures, and 30 medications.
 
 Notice how each dimension table maps to a specific foreign key in the fact tables -- `consultant_id` references `dim_consultant`, `ward_id` references `dim_ward`, and so on. Understanding which dimension connects to which facts is the first step to writing useful queries.
 
@@ -174,19 +185,21 @@ The ops team wants a recap of the single busiest day in A&E -- how many arrivals
 
 ```sql
 WITH busiest AS (
-    SELECT timestamp::DATE AS day, COUNT(*) AS arrivals
+    SELECT
+        timestamp::DATE AS day,
+        COUNT(*) AS arrivals
     FROM fact_ed_arrival
     GROUP BY day
     ORDER BY arrivals DESC
     LIMIT 1
 )
 SELECT
-    t.triage_category,
+    triage.triage_category,
     COUNT(*) AS patients
-FROM fact_triage t
-WHERE t.timestamp::DATE = (SELECT day FROM busiest)
-GROUP BY t.triage_category
-ORDER BY t.triage_category;
+FROM fact_triage triage
+WHERE triage.timestamp::DATE = (SELECT day FROM busiest)
+GROUP BY triage.triage_category
+ORDER BY triage.triage_category;
 ```
 
 </details>
@@ -202,9 +215,9 @@ Try running the top-10 busiest days to see the pattern. Do they cluster in certa
 
 ---
 
-### Exercise 4: "Where do our patients come from?"
+### Exercise 4: "What does our patient population look like?"
 
-The Population Health team wants a demographic profile of the trust's patient base.
+The Population Health team wants a demographic profile of the trust's patients.
 
 <details>
 <summary>Hints</summary>
@@ -221,7 +234,9 @@ The Population Health team wants a demographic profile of the trust's patient ba
 **Pathway split:**
 
 ```sql
-SELECT pathway_type, COUNT(*) AS patients
+SELECT
+    pathway_type,
+    COUNT(*) AS patients
 FROM dim_patient
 WHERE valid_to IS NULL
 GROUP BY pathway_type
@@ -231,7 +246,9 @@ ORDER BY patients DESC;
 **Primary condition breakdown:**
 
 ```sql
-SELECT primary_condition, COUNT(*) AS patients
+SELECT
+    primary_condition,
+    COUNT(*) AS patients
 FROM dim_patient
 WHERE valid_to IS NULL
 GROUP BY primary_condition
@@ -241,7 +258,9 @@ ORDER BY patients DESC;
 **IMD decile distribution:**
 
 ```sql
-SELECT imd_decile, COUNT(*) AS patients
+SELECT
+    imd_decile,
+    COUNT(*) AS patients
 FROM dim_patient
 WHERE valid_to IS NULL
 GROUP BY imd_decile
@@ -255,7 +274,7 @@ ORDER BY imd_decile;
 
 You should see roughly 55% elective, 35% emergency, and 10% cancer pathway patients. Cardiac is the most common primary condition, followed by respiratory and orthopaedic.
 
-IMD (Index of Multiple Deprivation) deciles range from 1 (most deprived) to 10 (least deprived). The distribution here is fairly uniform across deciles. In a real NHS trust, the distribution would reflect the local population's socioeconomic profile -- a London teaching hospital would look very different from a rural district general.
+IMD (Index of Multiple Deprivation) deciles range from 1 (most deprived) to 10 (least deprived). The distribution here skews toward more deprived deciles, with roughly 5x more patients in decile 1 than decile 10. This kind of skew is common in urban acute trusts serving deprived catchment areas -- a London teaching hospital would look very different from a rural district general.
 
 Keep the IMD data in mind -- we'll come back to it when looking at health inequalities later.
 
@@ -272,7 +291,7 @@ The Chief Operating Officer needs to know: what percentage of A&E patients are s
 <details>
 <summary>Hints</summary>
 
-- What fact tables capture the A&E journey? What's the first event? The last?
+- What fact tables capture the A&E pathway? What's the first event? The last?
 - How do you connect an arrival to an assessment for the same patient visit?
 - What column links events from the same A&E attendance?
 - Not all arrivals have an assessment. What happened to those patients?
@@ -288,14 +307,14 @@ The Chief Operating Officer needs to know: what percentage of A&E patients are s
 ```sql
 SELECT
     COUNT(*) AS assessed_patients,
-    ROUND(AVG(EXTRACT(EPOCH FROM (ea.timestamp - arr.timestamp)) / 60), 0) AS avg_minutes,
-    SUM(CASE WHEN EXTRACT(EPOCH FROM (ea.timestamp - arr.timestamp)) / 60 <= 240
+    ROUND(AVG(EXTRACT(EPOCH FROM (assessment.timestamp - arrival.timestamp)) / 60), 0) AS avg_minutes,
+    SUM(CASE WHEN EXTRACT(EPOCH FROM (assessment.timestamp - arrival.timestamp)) / 60 <= 240
         THEN 1 ELSE 0 END) AS within_4h,
-    ROUND(100.0 * SUM(CASE WHEN EXTRACT(EPOCH FROM (ea.timestamp - arr.timestamp)) / 60 <= 240
+    ROUND(100.0 * SUM(CASE WHEN EXTRACT(EPOCH FROM (assessment.timestamp - arrival.timestamp)) / 60 <= 240
         THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_within_4h
-FROM fact_ed_arrival arr
-JOIN fact_ed_assessment ea
-    ON arr.attendance_id = ea.attendance_id;
+FROM fact_ed_arrival arrival
+JOIN fact_ed_assessment assessment
+    ON arrival.attendance_id = assessment.attendance_id;
 ```
 
 </details>
@@ -337,13 +356,13 @@ The bed management team wants to know the average length of stay for inpatients.
 ```sql
 WITH spells AS (
     SELECT
-        a.spell_id,
-        MIN(a.timestamp) AS admission_ts,
-        MIN(d.timestamp) AS discharge_ts
-    FROM fact_admission a
-    JOIN fact_discharge d
-        ON a.spell_id = d.spell_id
-    GROUP BY a.spell_id
+        admission.spell_id,
+        MIN(admission.timestamp) AS admission_ts,
+        MIN(discharge.timestamp) AS discharge_ts
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.spell_id
 )
 SELECT
     COUNT(*) AS completed_spells,
@@ -359,23 +378,24 @@ FROM spells;
 ```sql
 WITH spells AS (
     SELECT
-        a.spell_id,
-        a.patient_id,
-        MIN(a.timestamp) AS admission_ts,
-        MIN(d.timestamp) AS discharge_ts
-    FROM fact_admission a
-    JOIN fact_discharge d
-        ON a.spell_id = d.spell_id
-    GROUP BY a.spell_id, a.patient_id
+        admission.spell_id,
+        admission.patient_id,
+        MIN(admission.timestamp) AS admission_ts,
+        MIN(discharge.timestamp) AS discharge_ts
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.spell_id, admission.patient_id
 )
 SELECT
-    p.primary_condition,
+    patient.primary_condition,
     COUNT(*) AS spells,
-    ROUND(AVG(EXTRACT(EPOCH FROM (s.discharge_ts - s.admission_ts)) / 86400.0), 1) AS mean_los
-FROM spells s
-JOIN dim_patient p ON s.patient_id = p.id AND p.valid_to IS NULL
-GROUP BY p.primary_condition
-ORDER BY mean_los DESC;
+    ROUND(AVG(EXTRACT(EPOCH FROM (spell.discharge_ts - spell.admission_ts)) / 86400.0), 1) AS mean_los
+FROM spells spell
+JOIN dim_patient patient
+    ON spell.patient_id = patient.id AND patient.valid_to IS NULL
+GROUP BY patient.primary_condition
+ORDER BY mean_los DESC, primary_condition;
 ```
 
 </details>
@@ -400,7 +420,7 @@ The outpatient services manager is worried about the gap between referrals and a
 <details>
 <summary>Hints</summary>
 
-- What fact tables track the outpatient journey?
+- What fact tables track the outpatient pathway?
 - `pathway_id` links events from the same pathway. How many distinct pathways appear in each table?
 - What could explain the gap between referral count and attendance count?
 - Recent referrals haven't had time to convert. How might this skew the funnel?
@@ -448,7 +468,7 @@ You should see a significant gap between referral pathways and attended pathways
 - Did Not Attend (DNA)
 - Pathways that ended before an appointment was scheduled
 
-The fact tables only capture events that happened. If a patient was referred but never attended, there's no row in `fact_appointment_attended` for that journey. This is a common pattern in healthcare analytics: absence of data is itself informative.
+The fact tables only capture events that happened. If a patient was referred but never attended, there's no row in `fact_appointment_attended` for that pathway. This is a common pattern in healthcare analytics: absence of data is itself informative.
 
 Referrals from the most recent months inflate the dropout rate (right-censoring) -- those patients simply haven't had time to attend yet. Try limiting to earlier years and see if the conversion rate improves.
 
@@ -504,11 +524,9 @@ FROM fact_fft_response;
 <details>
 <summary>Discussion</summary>
 
-Scores above 5 shouldn't exist on a 1-5 scale. How many records are affected? Run the score distribution to see the full picture.
+Check whether the score distribution looks reasonable. NHS FFT uses a 1-5 scale, so scores should fall within that range. Always verify the boundaries of survey data -- in real life, data entry errors, different survey versions, or system migrations can introduce out-of-range values. Running a quick distribution check is the first thing to do with any survey dataset.
 
-This is a data quality issue worth flagging to whoever manages the survey system. In real life, you'd document the anomaly and ask whether score 6 is a data entry error, a different survey version, or something else. See `project/data_issues.md` for more detail.
-
-Try filtering to the most recent quarter -- does the distribution look different? The board probably cares most about the latest period.
+The national average positive rate (scores 4-5) is typically around 85-90%. How does this trust compare? Try filtering to the most recent quarter -- does the distribution look different? The board probably cares most about the latest period.
 
 </details>
 
@@ -537,26 +555,28 @@ The Clinical Director wants to understand workload distribution across the medic
 
 ```sql
 SELECT
-    c.id,
-    c.specialty_group,
-    c.grade,
+    consultant.id,
+    consultant.specialty_group,
+    consultant.grade,
     COUNT(*) AS admissions
-FROM fact_admission a
-JOIN dim_consultant c ON a.consultant_id = c.id
-GROUP BY c.id, c.specialty_group, c.grade
-ORDER BY admissions DESC;
+FROM fact_admission admission
+JOIN dim_consultant consultant
+    ON admission.consultant_id = consultant.id
+GROUP BY consultant.id, consultant.specialty_group, consultant.grade
+ORDER BY admissions DESC, consultant.id;
 ```
 
 **Workload by specialty group:**
 
 ```sql
 SELECT
-    c.specialty_group,
+    consultant.specialty_group,
     COUNT(*) AS total_admissions,
-    COUNT(DISTINCT a.patient_id) AS unique_patients
-FROM fact_admission a
-JOIN dim_consultant c ON a.consultant_id = c.id
-GROUP BY c.specialty_group
+    COUNT(DISTINCT admission.patient_id) AS unique_patients
+FROM fact_admission admission
+JOIN dim_consultant consultant
+    ON admission.consultant_id = consultant.id
+GROUP BY consultant.specialty_group
 ORDER BY total_admissions DESC;
 ```
 
@@ -565,7 +585,7 @@ ORDER BY total_admissions DESC;
 <details>
 <summary>Discussion</summary>
 
-Respiratory consultants handle the most admissions, followed by general and cardiac. This makes sense given the patient condition distribution (cardiac is the largest group, but respiratory + infectious both map to the respiratory specialty group).
+Respiratory consultants handle the most admissions, followed by general and cardiac. Try joining admissions to patient condition and consultant specialty to see how conditions align with specialty groups.
 
 Notice the clinical coherence: cardiac patients are always seen by cardiac consultants, respiratory patients by respiratory consultants, and so on. This is a designed feature of the dataset -- try verifying it by joining admissions to patient condition and consultant specialty.
 
@@ -577,9 +597,9 @@ Try grouping by year to see if workload patterns are shifting. A staffing decisi
 
 ---
 
-### Exercise 10: "What procedures cost the most?"
+### Exercise 10: "What procedures generate the most income?"
 
-Finance wants a breakdown of surgical procedure costs by complexity.
+Finance wants a breakdown of surgical procedure tariffs by complexity.
 
 <details>
 <summary>Hints</summary>
@@ -616,8 +636,9 @@ SELECT
     proc.tariff,
     proc.specialty_group,
     COUNT(*) AS times_performed
-FROM fact_pre_op_assessment f
-JOIN dim_procedure proc ON f.procedure_id = proc.id
+FROM fact_pre_op_assessment assessment
+JOIN dim_procedure proc
+    ON assessment.procedure_id = proc.id
 GROUP BY proc.procedure_name, proc.complexity, proc.tariff, proc.specialty_group
 ORDER BY proc.tariff DESC
 LIMIT 10;
@@ -628,9 +649,9 @@ LIMIT 10;
 <details>
 <summary>Discussion</summary>
 
-There's a clear cost gradient: complex procedures average ~$10,900, major ~$6,100, moderate ~$2,000, and minor ~$700. The 7 complex procedures (things like CABG, craniotomy, complex spinal fusion) represent the highest-cost clinical activity.
+There's a clear tariff gradient: complex procedures average ~£10,900, major ~£6,100, moderate ~£2,000, and minor ~£700. The 7 complex procedures (things like CABG, craniotomy, complex spinal fusion) generate the most income per case.
 
-Try calculating total revenue per specialty group by multiplying tariff by the number of times each procedure was performed. Which specialty generates the most revenue?
+Try calculating total tariff income per specialty group by multiplying tariff by the number of times each procedure was performed. Which specialty generates the most income?
 
 </details>
 
@@ -645,7 +666,7 @@ The Cancer Services lead needs to report on the 28-day Faster Diagnosis Standard
 
 - What tables capture the cancer pathway?
 - `cancer_pathway_id` links a referral to its first-seen appointment.
-- Cancer journeys can have multiple referral events per pathway. How should you handle that?
+- Cancer pathways can have multiple referral events per pathway. How should you handle that?
 - Compute the gap in days between first referral and first appointment.
 - NHS reports cancer performance quarterly. What time period should you use?
 
@@ -659,13 +680,13 @@ The Cancer Services lead needs to report on the 28-day Faster Diagnosis Standard
 ```sql
 WITH cancer_times AS (
     SELECT
-        cr.cancer_pathway_id,
-        MIN(cr.timestamp) AS referral_ts,
-        MIN(fs.timestamp) AS first_seen_ts
-    FROM fact_cancer_referral cr
-    JOIN fact_cancer_first_seen fs
-        ON cr.cancer_pathway_id = fs.cancer_pathway_id
-    GROUP BY cr.cancer_pathway_id
+        referral.cancer_pathway_id,
+        MIN(referral.timestamp) AS referral_ts,
+        MIN(first_seen.timestamp) AS first_seen_ts
+    FROM fact_cancer_referral referral
+    JOIN fact_cancer_first_seen first_seen
+        ON referral.cancer_pathway_id = first_seen.cancer_pathway_id
+    GROUP BY referral.cancer_pathway_id
 )
 SELECT
     COUNT(*) AS pathways_seen,
@@ -684,7 +705,7 @@ FROM cancer_times;
 
 Compare your FDS percentage to the 75% national target. Is the trust hitting it?
 
-The `MIN()` aggregation is crucial here. Cancer journeys can have many referral and first-seen events per cancer pathway (some have 100+ rows in `fact_cancer_referral` due to pathway re-entry). Without aggregating to the pathway level first, you'd get a massive cartesian product.
+The `MIN()` aggregation is crucial here. Always aggregate to the pathway level first when measuring elapsed time between events. Without it, duplicate rows per pathway would inflate your result set and skew the averages.
 
 Try breaking down by quarter across all years to see the trend. Also try joining to `dim_patient` to check whether certain conditions or demographics correlate with longer waits.
 
@@ -715,13 +736,13 @@ The Diagnostics lead wants to know: are we hitting the 6-week diagnostic wait ta
 ```sql
 WITH diag_times AS (
     SELECT
-        do2.request_id,
-        MIN(do2.timestamp) AS ordered_ts,
-        MIN(dp.timestamp) AS performed_ts
-    FROM fact_diagnostic_ordered do2
-    JOIN fact_diagnostic_performed dp
-        ON do2.request_id = dp.request_id
-    GROUP BY do2.request_id
+        ordered.request_id,
+        MIN(ordered.timestamp) AS ordered_ts,
+        MIN(performed.timestamp) AS performed_ts
+    FROM fact_diagnostic_ordered ordered
+    JOIN fact_diagnostic_performed performed
+        ON ordered.request_id = performed.request_id
+    GROUP BY ordered.request_id
 )
 SELECT
     COUNT(*) AS tests_completed,
@@ -738,22 +759,23 @@ FROM diag_times;
 ```sql
 WITH diag_times AS (
     SELECT
-        do2.request_id,
-        do2.diagnostic_id,
-        MIN(do2.timestamp) AS ordered_ts,
-        MIN(dp.timestamp) AS performed_ts
-    FROM fact_diagnostic_ordered do2
-    JOIN fact_diagnostic_performed dp
-        ON do2.request_id = dp.request_id
-    GROUP BY do2.request_id, do2.diagnostic_id
+        ordered.request_id,
+        ordered.diagnostic_id,
+        MIN(ordered.timestamp) AS ordered_ts,
+        MIN(performed.timestamp) AS performed_ts
+    FROM fact_diagnostic_ordered ordered
+    JOIN fact_diagnostic_performed performed
+        ON ordered.request_id = performed.request_id
+    GROUP BY ordered.request_id, ordered.diagnostic_id
 )
 SELECT
-    d.test_type,
+    diagnostic.test_type,
     COUNT(*) AS completed,
-    ROUND(AVG(EXTRACT(EPOCH FROM (dt.performed_ts - dt.ordered_ts)) / 86400.0), 0) AS avg_days
-FROM diag_times dt
-JOIN dim_diagnostic d ON dt.diagnostic_id = d.id
-GROUP BY d.test_type
+    ROUND(AVG(EXTRACT(EPOCH FROM (diag_time.performed_ts - diag_time.ordered_ts)) / 86400.0), 0) AS avg_days
+FROM diag_times diag_time
+JOIN dim_diagnostic diagnostic
+    ON diag_time.diagnostic_id = diagnostic.id
+GROUP BY diagnostic.test_type
 ORDER BY avg_days DESC;
 ```
 
@@ -794,27 +816,31 @@ The Emergency Medicine consultant wants to understand: when an A&E patient gets 
 
 ```sql
 WITH ed_patients AS (
-    SELECT patient_id, attendance_id AS ed_instance, timestamp AS ed_arrival_ts
+    SELECT
+        patient_id,
+        attendance_id AS ed_instance,
+        timestamp AS ed_arrival_ts
     FROM fact_ed_arrival
 ),
 ip_spells AS (
     SELECT
-        a.patient_id,
-        a.spell_id AS ip_instance,
-        MIN(a.timestamp) AS admit_ts,
-        MIN(d.timestamp) AS discharge_ts
-    FROM fact_admission a
-    JOIN fact_discharge d ON a.spell_id = d.spell_id
-    GROUP BY a.patient_id, a.spell_id
+        admission.patient_id,
+        admission.spell_id AS ip_instance,
+        MIN(admission.timestamp) AS admit_ts,
+        MIN(discharge.timestamp) AS discharge_ts
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.patient_id, admission.spell_id
 )
 SELECT
     COUNT(*) AS ed_admitted_spells,
-    ROUND(AVG(EXTRACT(EPOCH FROM (ip.discharge_ts - ip.admit_ts)) / 86400.0), 1) AS ed_alos,
+    ROUND(AVG(EXTRACT(EPOCH FROM (inpatient.discharge_ts - inpatient.admit_ts)) / 86400.0), 1) AS ed_alos,
     (SELECT ROUND(AVG(EXTRACT(EPOCH FROM (discharge_ts - admit_ts)) / 86400.0), 1) FROM ip_spells) AS overall_alos
-FROM ed_patients e
-JOIN ip_spells ip
-    ON e.patient_id = ip.patient_id
-    AND ip.admit_ts BETWEEN e.ed_arrival_ts AND e.ed_arrival_ts + INTERVAL '24 hours';
+FROM ed_patients ed
+JOIN ip_spells inpatient
+    ON ed.patient_id = inpatient.patient_id
+    AND inpatient.admit_ts BETWEEN ed.ed_arrival_ts AND ed.ed_arrival_ts + INTERVAL '24 hours';
 ```
 
 </details>
@@ -854,24 +880,25 @@ The Quality Improvement team wants to know the 30-day readmission rate. NHS benc
 ```sql
 WITH spells AS (
     SELECT
-        a.patient_id,
-        a.spell_id,
-        MIN(a.timestamp) AS admit_ts,
-        MIN(d.timestamp) AS discharge_ts
-    FROM fact_admission a
-    JOIN fact_discharge d ON a.spell_id = d.spell_id
-    GROUP BY a.patient_id, a.spell_id
+        admission.patient_id,
+        admission.spell_id,
+        MIN(admission.timestamp) AS admit_ts,
+        MIN(discharge.timestamp) AS discharge_ts
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.patient_id, admission.spell_id
 )
 SELECT
-    COUNT(DISTINCT s2.spell_id) AS readmissions,
+    COUNT(DISTINCT readmit.spell_id) AS readmissions,
     (SELECT COUNT(*) FROM spells) AS total_completed_spells,
-    ROUND(100.0 * COUNT(DISTINCT s2.spell_id)
+    ROUND(100.0 * COUNT(DISTINCT readmit.spell_id)
         / (SELECT COUNT(*) FROM spells), 1) AS readmission_pct
-FROM spells s1
-JOIN spells s2
-    ON s1.patient_id = s2.patient_id
-    AND s2.admit_ts > s1.discharge_ts
-    AND EXTRACT(EPOCH FROM (s2.admit_ts - s1.discharge_ts)) / 86400.0 <= 30;
+FROM spells prior
+JOIN spells readmit
+    ON prior.patient_id = readmit.patient_id
+    AND readmit.admit_ts > prior.discharge_ts
+    AND EXTRACT(EPOCH FROM (readmit.admit_ts - prior.discharge_ts)) / 86400.0 <= 30;
 ```
 
 </details>
@@ -893,7 +920,7 @@ Try extending this by joining to `dim_patient` to see whether patients with high
 
 ### Exercise 15: "Which patients cost the most?"
 
-Finance wants to understand the highest-cost patient journeys. Consider procedure tariffs and bed-day costs.
+Finance wants to understand the highest-cost patient episodes. Consider procedure tariffs and bed-day costs.
 
 <details>
 <summary>Hints</summary>
@@ -912,15 +939,17 @@ Finance wants to understand the highest-cost patient journeys. Consider procedur
 
 ```sql
 SELECT
-    f.patient_id,
-    p.primary_condition,
+    assessment.patient_id,
+    patient.primary_condition,
     SUM(proc.tariff) AS total_procedure_cost,
     COUNT(*) AS procedures_performed
-FROM fact_pre_op_assessment f
-JOIN dim_procedure proc ON f.procedure_id = proc.id
-JOIN dim_patient p ON f.patient_id = p.id AND p.valid_to IS NULL
-GROUP BY f.patient_id, p.primary_condition
-ORDER BY total_procedure_cost DESC
+FROM fact_pre_op_assessment assessment
+JOIN dim_procedure proc
+    ON assessment.procedure_id = proc.id
+JOIN dim_patient patient
+    ON assessment.patient_id = patient.id AND patient.valid_to IS NULL
+GROUP BY assessment.patient_id, patient.primary_condition
+ORDER BY total_procedure_cost DESC, assessment.patient_id
 LIMIT 15;
 ```
 
@@ -929,30 +958,33 @@ LIMIT 15;
 ```sql
 WITH spell_los AS (
     SELECT
-        a.patient_id,
-        a.spell_id,
-        MIN(a.timestamp) AS admit_ts,
-        MIN(d.timestamp) AS discharge_ts,
-        EXTRACT(EPOCH FROM (MIN(d.timestamp) - MIN(a.timestamp))) / 86400.0 AS los_days
-    FROM fact_admission a
-    JOIN fact_discharge d ON a.spell_id = d.spell_id
-    GROUP BY a.patient_id, a.spell_id
+        admission.patient_id,
+        admission.spell_id,
+        MIN(admission.timestamp) AS admit_ts,
+        MIN(discharge.timestamp) AS discharge_ts,
+        EXTRACT(EPOCH FROM (MIN(discharge.timestamp) - MIN(admission.timestamp))) / 86400.0 AS los_days
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.patient_id, admission.spell_id
 ),
 ward_costs AS (
     SELECT
-        wa.spell_id,
-        AVG(w.cost_per_bed_day) AS avg_bed_cost
-    FROM fact_ward_assignment wa
-    JOIN dim_ward w ON wa.ward_id = w.id
-    GROUP BY wa.spell_id
+        assignment.spell_id,
+        AVG(ward.cost_per_bed_day) AS avg_bed_cost
+    FROM fact_ward_assignment assignment
+    JOIN dim_ward ward
+        ON assignment.ward_id = ward.id
+    GROUP BY assignment.spell_id
 )
 SELECT
-    sl.patient_id,
-    ROUND(sl.los_days, 1) AS los_days,
-    ROUND(wc.avg_bed_cost, 0) AS avg_bed_cost_per_day,
-    ROUND(sl.los_days * wc.avg_bed_cost, 0) AS total_bed_cost
-FROM spell_los sl
-JOIN ward_costs wc ON sl.spell_id = wc.spell_id
+    spell.patient_id,
+    ROUND(spell.los_days, 1) AS los_days,
+    ROUND(cost.avg_bed_cost, 0) AS avg_bed_cost_per_day,
+    ROUND(spell.los_days * cost.avg_bed_cost, 0) AS total_bed_cost
+FROM spell_los spell
+JOIN ward_costs cost
+    ON spell.spell_id = cost.spell_id
 ORDER BY total_bed_cost DESC
 LIMIT 15;
 ```
@@ -962,7 +994,7 @@ LIMIT 15;
 <details>
 <summary>Discussion</summary>
 
-The highest-cost patients tend to be those with multiple procedures (especially complex cardiac or neuro procedures) combined with long inpatient stays on high-cost wards (ICU at $1,800/day vs general at $350/day).
+The highest-cost patients tend to be those with multiple procedures combined with long inpatient stays on high-cost wards (ICU at £1,800/day vs general at £350/day). Check which conditions appear most often in the top-cost patients -- it may not be what you expect.
 
 This is a simplified cost model -- real NHS costing includes drug costs, diagnostic costs, staffing ratios, and overhead allocation. But it illustrates the principle: a small number of patients drive a disproportionate share of costs. This is the 80/20 rule in healthcare economics.
 
@@ -994,47 +1026,56 @@ The Health Inequalities lead wants to know: is there a relationship between depr
 ```sql
 WITH spells AS (
     SELECT
-        a.patient_id,
-        a.spell_id,
-        MIN(a.timestamp) AS admit_ts,
-        MIN(d.timestamp) AS discharge_ts
-    FROM fact_admission a
-    JOIN fact_discharge d ON a.spell_id = d.spell_id
-    GROUP BY a.patient_id, a.spell_id
+        admission.patient_id,
+        admission.spell_id,
+        MIN(admission.timestamp) AS admit_ts,
+        MIN(discharge.timestamp) AS discharge_ts
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.patient_id, admission.spell_id
 )
 SELECT
-    p.imd_decile,
+    patient.imd_decile,
     COUNT(*) AS spells,
-    ROUND(AVG(EXTRACT(EPOCH FROM (s.discharge_ts - s.admit_ts)) / 86400.0), 1) AS avg_los
-FROM spells s
-JOIN dim_patient p ON s.patient_id = p.id AND p.valid_to IS NULL
-GROUP BY p.imd_decile
-ORDER BY p.imd_decile;
+    ROUND(AVG(EXTRACT(EPOCH FROM (spell.discharge_ts - spell.admit_ts)) / 86400.0), 1) AS avg_los
+FROM spells spell
+JOIN dim_patient patient
+    ON spell.patient_id = patient.id AND patient.valid_to IS NULL
+GROUP BY patient.imd_decile
+ORDER BY patient.imd_decile;
 ```
 
 **Referral-to-attendance ratio by deprivation:**
 
 ```sql
-WITH referrals AS (
-    SELECT r.patient_id, COUNT(DISTINCT r.pathway_id) AS ref_count
-    FROM fact_referral_created r
-    GROUP BY r.patient_id
+WITH referral_counts AS (
+    SELECT
+        referral.patient_id,
+        COUNT(DISTINCT referral.pathway_id) AS ref_count
+    FROM fact_referral_created referral
+    GROUP BY referral.patient_id
 ),
-attended AS (
-    SELECT a.patient_id, COUNT(DISTINCT a.pathway_id) AS att_count
-    FROM fact_appointment_attended a
-    GROUP BY a.patient_id
+attendance_counts AS (
+    SELECT
+        appointment.patient_id,
+        COUNT(DISTINCT appointment.pathway_id) AS att_count
+    FROM fact_appointment_attended appointment
+    GROUP BY appointment.patient_id
 )
 SELECT
-    p.imd_decile,
-    SUM(r.ref_count) AS referrals,
-    COALESCE(SUM(a.att_count), 0) AS attended,
-    ROUND(100.0 * COALESCE(SUM(a.att_count), 0) / SUM(r.ref_count), 1) AS attendance_pct
-FROM referrals r
-JOIN dim_patient p ON r.patient_id = p.id AND p.valid_to IS NULL
-LEFT JOIN attended a ON r.patient_id = a.patient_id
-GROUP BY p.imd_decile
-ORDER BY p.imd_decile;
+    patient.imd_decile,
+    SUM(referral_counts.ref_count) AS referrals,
+    COALESCE(SUM(attendance_counts.att_count), 0) AS attended,
+    ROUND(100.0 * COALESCE(SUM(attendance_counts.att_count), 0)
+        / SUM(referral_counts.ref_count), 1) AS attendance_pct
+FROM referral_counts
+JOIN dim_patient patient
+    ON referral_counts.patient_id = patient.id AND patient.valid_to IS NULL
+LEFT JOIN attendance_counts
+    ON referral_counts.patient_id = attendance_counts.patient_id
+GROUP BY patient.imd_decile
+ORDER BY patient.imd_decile;
 ```
 
 </details>
@@ -1042,9 +1083,9 @@ ORDER BY p.imd_decile;
 <details>
 <summary>Discussion</summary>
 
-In this dataset, ALOS is fairly consistent across IMD deciles (ranging ~5.4 to 5.8 days). Real NHS data often shows longer stays for more deprived populations due to comorbidities, social care delays, and housing issues.
+ALOS shows a clear deprivation gradient -- patients from the most deprived areas (deciles 1-3) stay nearly twice as long as those from the least deprived (deciles 8-10). This is a significant finding and the kind of signal an inequalities dashboard should surface. In real NHS data, this pattern is well-documented and driven by comorbidities, social care delays, and housing issues affecting discharge.
 
-The referral-to-attendance ratio is more interesting to explore. In real NHS data, deprived populations typically have higher DNA rates. Here the pattern depends on how the simulation distributes patients.
+The referral-to-attendance ratio is also worth exploring by deprivation. In real NHS data, deprived populations typically have higher DNA rates, though the pattern here may be less pronounced.
 
 Health inequality analysis is a growing priority in NHS analytics. The tools you've used here -- joining clinical data to demographic data and stratifying by deprivation -- are exactly what real inequality dashboards do.
 
@@ -1097,18 +1138,22 @@ monthly_surgeries AS (
     FROM fact_surgery_performed GROUP BY month
 )
 SELECT
-    e.month,
-    e.ed_arrivals,
-    COALESCE(a.admissions, 0) AS admissions,
-    COALESCE(d.discharges, 0) AS discharges,
-    COALESCE(i.icu_events, 0) AS icu_events,
-    COALESCE(s.surgeries, 0) AS surgeries
-FROM monthly_ed e
-LEFT JOIN monthly_admits a ON e.month = a.month
-LEFT JOIN monthly_discharges d ON e.month = d.month
-LEFT JOIN monthly_icu i ON e.month = i.month
-LEFT JOIN monthly_surgeries s ON e.month = s.month
-ORDER BY e.month;
+    monthly_ed.month,
+    monthly_ed.ed_arrivals,
+    COALESCE(monthly_admits.admissions, 0) AS admissions,
+    COALESCE(monthly_discharges.discharges, 0) AS discharges,
+    COALESCE(monthly_icu.icu_events, 0) AS icu_events,
+    COALESCE(monthly_surgeries.surgeries, 0) AS surgeries
+FROM monthly_ed
+LEFT JOIN monthly_admits
+    ON monthly_ed.month = monthly_admits.month
+LEFT JOIN monthly_discharges
+    ON monthly_ed.month = monthly_discharges.month
+LEFT JOIN monthly_icu
+    ON monthly_ed.month = monthly_icu.month
+LEFT JOIN monthly_surgeries
+    ON monthly_ed.month = monthly_surgeries.month
+ORDER BY monthly_ed.month;
 ```
 
 **Daily ED arrivals to spot spikes:**
@@ -1119,7 +1164,7 @@ SELECT
     COUNT(*) AS arrivals
 FROM fact_ed_arrival
 GROUP BY day
-ORDER BY arrivals DESC
+ORDER BY arrivals DESC, day
 LIMIT 10;
 ```
 
@@ -1162,63 +1207,9 @@ The daily spike analysis reveals interesting outliers -- check whether the busie
 
 ## Data Detective
 
-### Exercise 18: "Something looks wrong with the survey data."
+### Exercise 18: "The Finance Director wants to know our surgical income."
 
-A data quality analyst has flagged the FFT (Friends and Family Test) responses. Can you investigate?
-
-<details>
-<summary>Hints</summary>
-
-- What values does `recommendation_score` take? What range should it have?
-- NHS FFT uses a 1-5 Likert scale.
-- How many records are affected?
-- Is the distribution of scores realistic?
-
-</details>
-
-<details>
-<summary>Solution</summary>
-
-**Score distribution:**
-
-```sql
-SELECT
-    recommendation_score,
-    COUNT(*) AS responses,
-    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS pct
-FROM fact_fft_response
-GROUP BY recommendation_score
-ORDER BY recommendation_score;
-```
-
-**Affected records:**
-
-```sql
-SELECT
-    COUNT(*) AS total_responses,
-    SUM(CASE WHEN recommendation_score > 5 THEN 1 ELSE 0 END) AS invalid_scores,
-    SUM(CASE WHEN recommendation_score < 4 THEN 1 ELSE 0 END) AS negative_responses
-FROM fact_fft_response;
-```
-
-</details>
-
-<details>
-<summary>Discussion</summary>
-
-The key finding: scores above 5 exist, and they shouldn't on a 1-5 scale. How many records are affected? What percentage of total responses?
-
-These are the kind of data quality issues you find in production systems all the time. The fix depends on the source: if the survey platform uses a 0-5 scale that was mapped incorrectly, every score might be off by 1. If it's a different issue, you need to investigate further.
-
-In a real report, you'd flag this, quantify the impact, and caveat any satisfaction metrics. Invalid scores undermine confidence in the entire dataset.
-
-</details>
-
----
-
-### Exercise 19: "The Finance Director wants to know our surgical revenue."
-
-Calculate total surgical revenue from theatre utilisation and procedure tariffs.
+Calculate total surgical tariff income from theatre utilisation and procedure tariffs.
 
 <details>
 <summary>Hints</summary>
@@ -1226,7 +1217,7 @@ Calculate total surgical revenue from theatre utilisation and procedure tariffs.
 - `fact_surgery_performed` links to `dim_theatre` (which theatre was used).
 - `fact_pre_op_assessment` links to `dim_procedure` (which procedure was planned).
 - Can you link a surgery to its procedure? They share a `surgical_episode_id` within the surgical pathway.
-- Total revenue = sum of procedure tariffs for all completed surgeries.
+- Total income = sum of procedure tariffs for all completed surgeries.
 
 </details>
 
@@ -1237,42 +1228,44 @@ Calculate total surgical revenue from theatre utilisation and procedure tariffs.
 
 ```sql
 SELECT
-    t.theatre_name,
-    t.specialty,
+    theatre.theatre_name,
+    theatre.specialty,
     COUNT(*) AS surgeries,
     ROUND(COUNT(*) * 1.0 / DATEDIFF('day',
         (SELECT MIN(timestamp) FROM fact_surgery_performed),
         (SELECT MAX(timestamp) FROM fact_surgery_performed)
     ), 1) AS per_day
-FROM fact_surgery_performed sp
-JOIN dim_theatre t ON sp.theatre_id = t.id
-GROUP BY t.theatre_name, t.specialty
+FROM fact_surgery_performed surgery
+JOIN dim_theatre theatre
+    ON surgery.theatre_id = theatre.id
+GROUP BY theatre.theatre_name, theatre.specialty
 ORDER BY surgeries DESC;
 ```
 
-**Revenue by procedure complexity:**
+**Income by procedure complexity:**
 
 ```sql
 WITH surgery_procedures AS (
     SELECT
-        sp.surgical_episode_id,
+        surgery.surgical_episode_id,
         proc.procedure_name,
         proc.complexity,
         proc.tariff,
         proc.specialty_group
-    FROM fact_surgery_performed sp
-    JOIN fact_pre_op_assessment po
-        ON sp.surgical_episode_id = po.surgical_episode_id
-    JOIN dim_procedure proc ON po.procedure_id = proc.id
+    FROM fact_surgery_performed surgery
+    JOIN fact_pre_op_assessment pre_op
+        ON surgery.surgical_episode_id = pre_op.surgical_episode_id
+    JOIN dim_procedure proc
+        ON pre_op.procedure_id = proc.id
 )
 SELECT
     complexity,
     COUNT(*) AS surgeries,
     ROUND(AVG(tariff), 0) AS avg_tariff,
-    SUM(tariff) AS total_revenue
+    SUM(tariff) AS total_income
 FROM surgery_procedures
 GROUP BY complexity
-ORDER BY total_revenue DESC;
+ORDER BY total_income DESC;
 ```
 
 </details>
@@ -1282,23 +1275,23 @@ ORDER BY total_revenue DESC;
 
 Is utilisation roughly even across theatres? The per-day figure gives you a sense of how busy each theatre is across the dataset's time span.
 
-Linking surgeries to their procedures requires going through the `surgical_episode_id` -- the surgery fact and the pre-op assessment fact share the same surgical pathway journey. The join gives you the procedure details (name, complexity, tariff) for each completed surgery.
+Linking surgeries to their procedures requires going through the `surgical_episode_id` -- the surgery fact and the pre-op assessment fact share the same surgical episode. The join gives you the procedure details (name, complexity, tariff) for each completed surgery.
 
-Revenue concentrates in complex and major procedures. A small number of high-tariff operations (cardiac, neuro) drive a disproportionate share of surgical income. This is typical of NHS trust finances.
+Income concentrates in complex and major procedures. Check which specialty groups generate the most total income -- the answer depends on both the tariff per case and the volume of cases performed. This concentration pattern is typical of NHS trust finances.
 
 </details>
 
 ---
 
-### Exercise 20: "Are we keeping patients, or just cycling through them?"
+### Exercise 19: "Are we keeping patients, or just cycling through them?"
 
-The strategy team wants to understand patient retention. Do patients come back for multiple episodes of care, or is it mostly one-and-done?
+The strategy team wants to understand service utilisation patterns. Do patients come back for multiple episodes of care, or is it mostly one-and-done?
 
 <details>
 <summary>Hints</summary>
 
 - A patient can appear in multiple care episodes across different pathways.
-- Count distinct episodes per patient to measure "engagement."
+- Count distinct episodes per patient to measure service utilisation.
 - Which patients have the most complex care histories? What conditions?
 - Consider both inpatient spells and outpatient pathways.
 
@@ -1314,7 +1307,9 @@ SELECT
     spells_per_patient,
     COUNT(*) AS patients
 FROM (
-    SELECT patient_id, COUNT(DISTINCT spell_id) AS spells_per_patient
+    SELECT
+        patient_id,
+        COUNT(DISTINCT spell_id) AS spells_per_patient
     FROM fact_admission
     GROUP BY patient_id
 )
@@ -1342,7 +1337,7 @@ SELECT
     COUNT(DISTINCT pathway) AS pathway_types
 FROM patient_journeys
 GROUP BY patient_id
-ORDER BY total_journeys DESC
+ORDER BY total_journeys DESC, patient_id
 LIMIT 15;
 ```
 
@@ -1350,19 +1345,22 @@ LIMIT 15;
 
 ```sql
 WITH patient_spells AS (
-    SELECT patient_id, COUNT(DISTINCT spell_id) AS spell_count
+    SELECT
+        patient_id,
+        COUNT(DISTINCT spell_id) AS spell_count
     FROM fact_admission
     GROUP BY patient_id
     HAVING COUNT(DISTINCT spell_id) >= 3
 )
 SELECT
-    p.primary_condition,
-    p.comorbidity_count,
-    AVG(ps.spell_count) AS avg_spells,
+    patient.primary_condition,
+    patient.comorbidity_count,
+    AVG(patient_spells.spell_count) AS avg_spells,
     COUNT(*) AS patients
-FROM patient_spells ps
-JOIN dim_patient p ON ps.patient_id = p.id AND p.valid_to IS NULL
-GROUP BY p.primary_condition, p.comorbidity_count
+FROM patient_spells
+JOIN dim_patient patient
+    ON patient_spells.patient_id = patient.id AND patient.valid_to IS NULL
+GROUP BY patient.primary_condition, patient.comorbidity_count
 ORDER BY avg_spells DESC;
 ```
 
@@ -1373,7 +1371,7 @@ ORDER BY avg_spells DESC;
 
 Most patients have 1-2 inpatient spells. A small group of "frequent flyers" have 3+ spells and tend to appear across multiple pathways (ED, inpatient, surgical). These high-frequency patients are often the focus of clinical case management programs.
 
-The multi-pathway query shows which patients have the most complex care journeys -- touching ED, inpatient, outpatient, surgical, and cancer pathways. The condition and comorbidity profile of these patients tells the clinical story: patients with multiple comorbidities and complex conditions use more services.
+The multi-pathway query shows which patients have the most complex care histories. How many distinct pathway types do the top patients actually touch? The condition and comorbidity profile of these patients tells the clinical story: patients with multiple comorbidities and complex conditions use more services.
 
 This is cohort analysis applied to healthcare. The same principle (who returns, who doesn't, and why) applies across industries.
 
@@ -1383,7 +1381,7 @@ This is cohort analysis applied to healthcare. The same principle (who returns, 
 
 ## Multi-Year Analysis
 
-### Exercise 21: "Are we getting better or worse?"
+### Exercise 20: "Are we getting better or worse?"
 
 The board wants a performance dashboard showing quarterly trends for key NHS targets. Pick three targets we've already computed (A&E 4-hour, Cancer 28-day FDS, Diagnostic 6-week) and show how they trend over time.
 
@@ -1403,13 +1401,13 @@ The board wants a performance dashboard showing quarterly trends for key NHS tar
 
 ```sql
 SELECT
-    DATE_TRUNC('quarter', arr.timestamp)::DATE AS quarter,
+    DATE_TRUNC('quarter', arrival.timestamp)::DATE AS quarter,
     COUNT(*) AS assessed,
-    ROUND(100.0 * SUM(CASE WHEN EXTRACT(EPOCH FROM (ea.timestamp - arr.timestamp)) / 60 <= 240
+    ROUND(100.0 * SUM(CASE WHEN EXTRACT(EPOCH FROM (assessment.timestamp - arrival.timestamp)) / 60 <= 240
         THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_within_4h
-FROM fact_ed_arrival arr
-JOIN fact_ed_assessment ea
-    ON arr.attendance_id = ea.attendance_id
+FROM fact_ed_arrival arrival
+JOIN fact_ed_assessment assessment
+    ON arrival.attendance_id = assessment.attendance_id
 GROUP BY quarter
 ORDER BY quarter;
 ```
@@ -1419,17 +1417,17 @@ ORDER BY quarter;
 ```sql
 WITH cancer_times AS (
     SELECT
-        cr.cancer_pathway_id,
-        MIN(cr.timestamp) AS referral_ts,
-        MIN(fs.timestamp) AS first_seen_ts
-    FROM fact_cancer_referral cr
-    JOIN fact_cancer_first_seen fs
-        ON cr.cancer_pathway_id = fs.cancer_pathway_id
-    GROUP BY cr.cancer_pathway_id
+        referral.cancer_pathway_id,
+        MIN(referral.timestamp) AS referral_ts,
+        MIN(first_seen.timestamp) AS first_seen_ts
+    FROM fact_cancer_referral referral
+    JOIN fact_cancer_first_seen first_seen
+        ON referral.cancer_pathway_id = first_seen.cancer_pathway_id
+    GROUP BY referral.cancer_pathway_id
 )
 SELECT
     DATE_TRUNC('quarter', referral_ts)::DATE AS quarter,
-    COUNT(*) AS journeys,
+    COUNT(*) AS pathways,
     ROUND(100.0 * SUM(CASE WHEN EXTRACT(EPOCH FROM (first_seen_ts - referral_ts)) / 86400.0 <= 28
         THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_fds
 FROM cancer_times
@@ -1442,13 +1440,13 @@ ORDER BY quarter;
 ```sql
 WITH diag_times AS (
     SELECT
-        do2.request_id,
-        MIN(do2.timestamp) AS ordered_ts,
-        MIN(dp.timestamp) AS performed_ts
-    FROM fact_diagnostic_ordered do2
-    JOIN fact_diagnostic_performed dp
-        ON do2.request_id = dp.request_id
-    GROUP BY do2.request_id
+        ordered.request_id,
+        MIN(ordered.timestamp) AS ordered_ts,
+        MIN(performed.timestamp) AS performed_ts
+    FROM fact_diagnostic_ordered ordered
+    JOIN fact_diagnostic_performed performed
+        ON ordered.request_id = performed.request_id
+    GROUP BY ordered.request_id
 )
 SELECT
     DATE_TRUNC('quarter', ordered_ts)::DATE AS quarter,
@@ -1473,9 +1471,9 @@ Present these as line charts with horizontal target lines (78% for A&E, 75% for 
 
 ---
 
-### Exercise 22: "Do our patients come back?"
+### Exercise 21: "Do our patients come back?"
 
-Cohort analysis: of patients first seen in 2023, how many had activity in 2024? In 2025? This is about long-term patient retention, not 30-day readmissions.
+Cohort analysis: of patients first seen in 2023, how many had activity in 2024? In 2025? This is about long-term continuity of care, not 30-day readmissions.
 
 <details>
 <summary>Hints</summary>
@@ -1483,7 +1481,7 @@ Cohort analysis: of patients first seen in 2023, how many had activity in 2024? 
 - Define "first appeared" using `MIN(timestamp)` across the major fact tables.
 - Build a 2023 cohort -- patients whose earliest activity falls in 2023.
 - Then check which years those same patients appear in across all fact tables.
-- This is different from Exercise 20 (which looked at journey counts per patient). Here you're looking at year-over-year retention.
+- This is different from Exercise 19 (which looked at episode counts per patient). Here you're looking at year-over-year re-attendance.
 
 </details>
 
@@ -1507,7 +1505,9 @@ WITH all_activity AS (
     SELECT patient_id, timestamp FROM fact_appointment_attended
 ),
 first_activity AS (
-    SELECT patient_id, MIN(timestamp) AS first_ts
+    SELECT
+        patient_id,
+        MIN(timestamp) AS first_ts
     FROM all_activity
     GROUP BY patient_id
 ),
@@ -1517,10 +1517,11 @@ cohort_2023 AS (
     WHERE EXTRACT(YEAR FROM first_ts) = 2023
 )
 SELECT
-    EXTRACT(YEAR FROM a.timestamp)::INTEGER AS activity_year,
-    COUNT(DISTINCT a.patient_id) AS patients_active
-FROM all_activity a
-JOIN cohort_2023 c ON a.patient_id = c.patient_id
+    EXTRACT(YEAR FROM activity.timestamp)::INTEGER AS activity_year,
+    COUNT(DISTINCT activity.patient_id) AS patients_active
+FROM all_activity activity
+JOIN cohort_2023 cohort
+    ON activity.patient_id = cohort.patient_id
 GROUP BY activity_year
 ORDER BY activity_year;
 ```
@@ -1530,9 +1531,9 @@ ORDER BY activity_year;
 <details>
 <summary>Discussion</summary>
 
-High retention (many 2023 patients still appearing in 2024 and 2025) suggests chronic conditions needing ongoing management -- these patients aren't "cured and gone." Low retention suggests acute, one-time encounters.
+High re-attendance (many 2023 patients still appearing in 2024 and 2025) suggests chronic conditions needing ongoing management -- these patients aren't "cured and gone." Low re-attendance suggests acute, one-time encounters.
 
-Try segmenting by primary condition or pathway type. Cardiac and respiratory patients likely have higher retention than orthopaedic patients who come in for a single procedure. This connects back to Exercise 20 (patient retention) but adds the time dimension -- are we seeing the same patients year after year, or is the population turning over?
+Try segmenting by primary condition or pathway type. Cardiac and respiratory patients likely have higher re-attendance than orthopaedic patients who come in for a single procedure. This connects back to Exercise 19 (service utilisation) but adds the time dimension -- are we seeing the same patients year after year, or is the population turning over?
 
 </details>
 
