@@ -64,8 +64,11 @@
     #exercises-panel {
       width: 42%; overflow-y: auto; background: var(--surface);
       border-right: 1px solid var(--border); flex-shrink: 0;
+      min-width: 0; transition: width 0.2s ease;
     }
-    #main-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    #exercises-panel.collapsed { width: 0 !important; min-width: 0; overflow: hidden; border-right: none; }
+    body.dragging #exercises-panel { transition: none; }
+    #main-panel { flex: 1; display: flex; flex-direction: column; min-width: 300px; }
 
     /* ── Exercises content ────────────────────────────────── */
     #browser-banner {
@@ -126,8 +129,49 @@
       margin: 10px 0; color: var(--text-secondary);
     }
 
+    /* ── Splitters ─────────────────────────────────────────── */
+    .splitter { flex-shrink: 0; background: var(--border); position: relative; z-index: 2; }
+    .splitter:hover, .splitter:active { background: var(--nhs-blue); }
+    .splitter-v {
+      width: 7px; cursor: col-resize; background: #c8cfd3;
+    }
+    .splitter-h {
+      height: 7px; cursor: row-resize; background: #c8cfd3;
+    }
+    .splitter::after {
+      content: ''; position: absolute;
+      background: #999; border-radius: 1px;
+    }
+    .splitter:hover::after, .splitter:active::after { background: white; }
+    .splitter-v::after {
+      width: 3px; height: 32px;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      border-left: 1px solid #999; border-right: 1px solid #999;
+      background: transparent;
+    }
+    .splitter-h::after {
+      height: 3px; width: 32px;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      border-top: 1px solid #999; border-bottom: 1px solid #999;
+      background: transparent;
+    }
+    body.dragging { user-select: none; }
+    body.dragging-col { cursor: col-resize !important; }
+    body.dragging-row { cursor: row-resize !important; }
+
+    /* ── Collapse button ──────────────────────────────────── */
+    #collapse-btn {
+      position: absolute; top: 50%; right: -18px; transform: translateY(-50%);
+      width: 18px; height: 36px; background: var(--surface);
+      border: 1px solid var(--border); border-left: none;
+      border-radius: 0 4px 4px 0; cursor: pointer; z-index: 3;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: var(--text-secondary); padding: 0;
+    }
+    #collapse-btn:hover { background: var(--bg); color: var(--nhs-blue); }
+
     /* ── Editor ──────────────────────────────────────────── */
-    #editor-panel { display: flex; flex-direction: column; flex-shrink: 0; }
+    #editor-panel { display: flex; flex-direction: column; flex-shrink: 0; min-height: 80px; overflow: hidden; }
     #editor-toolbar {
       display: flex; align-items: center; justify-content: space-between;
       padding: 6px 12px; background: #f8f9fa; border-bottom: 1px solid var(--border);
@@ -136,11 +180,11 @@
     .shortcut-hint { font-size: 12px; color: var(--text-secondary); }
 
     #sql-editor {
-      width: 100%; height: 200px;
+      width: 100%; flex: 1; height: 0;
       font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
       font-size: 14px; line-height: 1.5; padding: 12px 14px;
       background: var(--editor-bg); color: var(--editor-text);
-      border: none; resize: vertical; outline: none; tab-size: 2;
+      border: none; resize: none; outline: none; tab-size: 2;
     }
     #sql-editor::placeholder { color: #666; }
 
@@ -160,7 +204,7 @@
     #reset-btn:disabled { opacity: 0.5; cursor: default; }
 
     /* ── Results ─────────────────────────────────────────── */
-    #results-panel { flex: 1; overflow: auto; min-height: 0; }
+    #results-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 80px; }
     #results-meta {
       padding: 7px 14px; font-size: 13px; color: var(--text-secondary);
       background: #f8f9fa; border-top: 1px solid var(--border);
@@ -195,10 +239,12 @@
     @media (max-width: 900px) {
       #layout { flex-direction: column; }
       #exercises-panel {
-        width: 100%; height: 40vh; border-right: none;
+        width: 100% !important; height: 40vh; border-right: none;
         border-bottom: 1px solid var(--border);
       }
-      #main-panel { width: 100%; }
+      #exercises-panel.collapsed { height: 0 !important; width: 100% !important; border-bottom: none; }
+      #main-panel { width: 100%; min-width: 0; }
+      .splitter-v { display: none !important; }
     }
   </style>
 </head>
@@ -227,6 +273,10 @@
     </div>
   </aside>
 
+  <div id="v-splitter" class="splitter splitter-v">
+    <button id="collapse-btn" title="Collapse exercises panel">&#9664;</button>
+  </div>
+
   <div id="main-panel">
     <div id="editor-panel">
       <div id="editor-toolbar">
@@ -245,6 +295,7 @@
         placeholder="-- Write SQL here"
       ></textarea>
     </div>
+    <div id="h-splitter" class="splitter splitter-h"></div>
     <div id="results-panel">
       <div id="results-meta"></div>
       <div id="results-scroll">
@@ -283,10 +334,99 @@
   const resultsMeta     = $('results-meta');
   const resultsContent  = $('results-content');
 
+  const layout          = $('layout');
+  const exercisesPanel  = $('exercises-panel');
+  const mainPanel       = $('main-panel');
+  const editorPanel     = $('editor-panel');
+  const vSplitter       = $('v-splitter');
+  const hSplitter       = $('h-splitter');
+  const collapseBtn     = $('collapse-btn');
+
   let db = null, conn = null;
 
   const modKey = /Mac|iPhone|iPad/.test(navigator.platform) ? '\u2318' : 'Ctrl';
   $('shortcut-hint').textContent = `${modKey}+Enter to run \u00b7 Tab indents`;
+
+  // ── Splitter utility ──────────────────────────────────────
+  function initSplitter(splitter, direction, before, container, minBefore, minAfter) {
+    const isCol = direction === 'col';
+    const prop = isCol ? 'width' : 'height';
+    const clientPos = isCol ? 'clientX' : 'clientY';
+    const cursorClass = isCol ? 'dragging-col' : 'dragging-row';
+
+    function onPointerDown(startE) {
+      startE.preventDefault();
+      const startPos = startE[clientPos];
+      const startSize = before.getBoundingClientRect()[prop];
+      const containerSize = container.getBoundingClientRect()[prop];
+      const splitterSize = splitter.getBoundingClientRect()[prop];
+      const maxBefore = containerSize - minAfter - splitterSize;
+
+      document.body.classList.add('dragging', cursorClass);
+
+      function onMove(e) {
+        const delta = e[clientPos] - startPos;
+        const newSize = Math.min(maxBefore, Math.max(minBefore, startSize + delta));
+        before.style[prop] = newSize + 'px';
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.classList.remove('dragging', cursorClass);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    }
+
+    function onTouchStart(startE) {
+      const touch = startE.touches[0];
+      const startPos = touch[clientPos];
+      const startSize = before.getBoundingClientRect()[prop];
+      const containerSize = container.getBoundingClientRect()[prop];
+      const splitterSize = splitter.getBoundingClientRect()[prop];
+      const maxBefore = containerSize - minAfter - splitterSize;
+
+      function onTouchMove(e) {
+        e.preventDefault();
+        const delta = e.touches[0][clientPos] - startPos;
+        const newSize = Math.min(maxBefore, Math.max(minBefore, startSize + delta));
+        before.style[prop] = newSize + 'px';
+      }
+      function onTouchEnd() {
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
+      }
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      document.addEventListener('touchend', onTouchEnd);
+    }
+
+    splitter.addEventListener('mousedown', onPointerDown);
+    splitter.addEventListener('touchstart', onTouchStart, { passive: true });
+  }
+
+  // ── Collapse / expand exercises ───────────────────────────
+  let savedExercisesWidth = null;
+  let exercisesCollapsed = false;
+
+  collapseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (exercisesCollapsed) {
+      exercisesPanel.classList.remove('collapsed');
+      if (savedExercisesWidth) exercisesPanel.style.width = savedExercisesWidth;
+      collapseBtn.innerHTML = '&#9664;';
+      collapseBtn.title = 'Collapse exercises panel';
+    } else {
+      savedExercisesWidth = exercisesPanel.style.width || exercisesPanel.getBoundingClientRect().width + 'px';
+      exercisesPanel.classList.add('collapsed');
+      collapseBtn.innerHTML = '&#9654;';
+      collapseBtn.title = 'Expand exercises panel';
+    }
+    exercisesCollapsed = !exercisesCollapsed;
+  });
+
+  // ── Init splitters ────────────────────────────────────────
+  initSplitter(vSplitter, 'col', exercisesPanel, layout, 200, 300);
+  initSplitter(hSplitter, 'row', editorPanel, mainPanel, 80, 80);
 
   // ── Initialization ─────────────────────────────────────────
   async function init() {
@@ -349,6 +489,7 @@
       dbStatus.textContent = `${total} tables loaded`;
       runBtn.disabled = false;
       resetBtn.disabled = false;
+      editorPanel.style.height = Math.round(mainPanel.getBoundingClientRect().height * 0.4) + 'px';
       editor.value = 'SHOW TABLES;';
       editor.focus();
       editor.setSelectionRange(0, editor.value.length);
@@ -418,7 +559,14 @@
       return;
     }
 
-    const cols = table.schema.fields.map(f => f.name);
+    const fields = table.schema.fields;
+    const cols = fields.map(f => f.name);
+    const colTypes = fields.map(f => {
+      const t = f.type;
+      if (t.typeId === 8 /* Date */) return 'date';
+      if (t.typeId === 10 /* Timestamp */) return 'timestamp';
+      return null;
+    });
     const total = table.numRows;
     const limit = Math.min(total, MAX_ROWS);
     const rows = table.toArray();
@@ -429,7 +577,7 @@
 
     for (let i = 0; i < limit; i++) {
       html += '<tr>';
-      for (const c of cols) html += `<td>${fmtVal(rows[i][c])}</td>`;
+      for (let j = 0; j < cols.length; j++) html += `<td>${fmtVal(rows[i][cols[j]], colTypes[j])}</td>`;
       html += '</tr>';
     }
     html += '</tbody></table>';
@@ -439,10 +587,17 @@
     resultsContent.innerHTML = html;
   }
 
-  function fmtVal(v) {
+  function fmtVal(v, colType) {
     if (v === null || v === undefined) return '<span class="null">NULL</span>';
+    if (colType === 'date') {
+      const d = new Date(typeof v === 'bigint' ? Number(v) : v);
+      return esc(d.toISOString().slice(0, 10));
+    }
+    if (colType === 'timestamp' || v instanceof Date) {
+      const d = v instanceof Date ? v : new Date(typeof v === 'bigint' ? Number(v) / 1000 : v);
+      return esc(d.toISOString().replace('T', ' ').replace(/\.000Z$/, ''));
+    }
     if (typeof v === 'bigint') return esc(Number(v).toString());
-    if (v instanceof Date) return esc(v.toISOString().replace('T', ' ').replace(/\.000Z$/, ''));
     return esc(String(v));
   }
 
