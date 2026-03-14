@@ -2,6 +2,25 @@
 
 27 SQL exercises using an NHS acute trust dataset. Exercises are framed as real operational questions, progressing in difficulty from beginner to intermediate.
 
+## Running Locally
+
+Both the SQL and Python practice tools run entirely in your browser via WebAssembly — no backend server required. You just need to serve the files over HTTP (browsers block local file access for security).
+
+```bash
+# Clone the repo
+git clone https://github.com/leogodin217/nhs_sql_practice_data.git
+cd nhs_sql_practice_data
+
+# Serve with Python's built-in HTTP server
+python -m http.server 8000
+```
+
+Then open:
+- **SQL Practice:** [http://localhost:8000/](http://localhost:8000/)
+- **Python Practice:** [http://localhost:8000/python.html](http://localhost:8000/python.html)
+
+The Python version uses [Pyodide](https://pyodide.org) to run pandas, matplotlib, seaborn, scipy, and scikit-learn in the browser. First load takes 15-30 seconds while packages download.
+
 ## Why?
 
 NHS hospitals generate mountains of data -- admissions, discharges, referrals, theatre bookings, diagnostic orders, patient surveys. Analysts working with this data need to understand how clinical processes connect, how to compute national performance targets, and how to spot data quality issues.

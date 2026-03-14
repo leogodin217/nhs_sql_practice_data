@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob:; worker-src blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:;">
-  <title>NHS SQL Practice — Millbrook NHS Trust</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob:; worker-src blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net https://pypi.org https://files.pythonhosted.org; img-src 'self' data:;">
+  <title>NHS Python Practice — Millbrook NHS Trust</title>
   <style>
     :root {
       --nhs-blue: #005EB8;
@@ -95,16 +95,16 @@
       border-radius: 4px; overflow-x: auto; margin: 10px 0;
       font-size: 13px; line-height: 1.5; position: relative;
     }
-    #exercises-content pre:has(code.language-sql) { cursor: pointer; }
-    #exercises-content pre:has(code.language-sql):hover { outline: 2px solid var(--nhs-blue); }
-    #exercises-content pre:has(code.language-sql)::after {
+    #exercises-content pre:has(code.language-python) { cursor: pointer; }
+    #exercises-content pre:has(code.language-python):hover { outline: 2px solid var(--nhs-blue); }
+    #exercises-content pre:has(code.language-python)::after {
       content: 'click to load';
       position: absolute; top: 6px; right: 8px;
       font-size: 11px; color: #aaa; background: rgba(0,0,0,0.4);
       padding: 1px 7px; border-radius: 3px;
       opacity: 0; transition: opacity 0.15s; font-family: sans-serif;
     }
-    #exercises-content pre:has(code.language-sql):hover::after { opacity: 1; }
+    #exercises-content pre:has(code.language-python):hover::after { opacity: 1; }
 
     #exercises-content code {
       font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace; font-size: 13px;
@@ -185,7 +185,7 @@
       font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
       font-size: 14px; line-height: 1.5; padding: 12px 14px;
       background: var(--editor-bg); color: var(--editor-text);
-      border: none; resize: none; outline: none; tab-size: 2;
+      border: none; resize: none; outline: none; tab-size: 4;
     }
     #sql-editor::placeholder { color: #666; }
 
@@ -214,20 +214,36 @@
     }
     #results-scroll { overflow: auto; flex: 1; }
 
-    #results-content table {
+    /* ── Python output ──────────────────────────────────── */
+    #results-content { padding: 0; }
+
+    .stdout {
+      padding: 14px; margin: 0;
+      font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
+      font-size: 13px; line-height: 1.5;
+      white-space: pre-wrap; word-wrap: break-word;
+      background: white;
+    }
+
+    .df-output { overflow-x: auto; }
+    .df-output table {
       width: 100%; border-collapse: collapse;
       font-size: 13px; font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
     }
-    #results-content th {
+    .df-output th {
       background: var(--bg); position: sticky; top: 0; z-index: 1;
       border-bottom: 2px solid var(--border); font-weight: 600;
     }
-    #results-content td, #results-content th {
+    .df-output td, .df-output th {
       padding: 5px 10px; text-align: left; border-bottom: 1px solid #eee;
       white-space: nowrap; max-width: 400px; overflow: hidden; text-overflow: ellipsis;
     }
-    #results-content tr:hover td { background: #f0f7ff; }
-    .null { color: #999; font-style: italic; }
+    .df-output tr:hover td { background: #f0f7ff; }
+    .df-output .blank { color: #999; }
+
+    .fig-output { padding: 14px; text-align: center; }
+    .fig-output img { max-width: 100%; border-radius: 4px; }
+
     .error-msg {
       padding: 14px; background: #fde8e8; color: var(--nhs-red);
       border-radius: 4px; margin: 14px;
@@ -258,7 +274,7 @@
 </div>
 
 <header id="app-header">
-  <h1>NHS SQL Practice</h1>
+  <h1>NHS Python Practice</h1>
   <span id="db-status"></span>
 </header>
 
@@ -266,8 +282,8 @@
   <aside id="exercises-panel">
     <div id="browser-banner">
       <strong>Browser edition.</strong>
-      DuckDB is running in your browser — no install needed.
-      Click any SQL block in the exercises to load it into the editor.
+      Python is running in your browser via Pyodide — no install needed.
+      Click any Python block in the exercises to load it into the editor.
     </div>
     <div id="exercises-content">
       <p class="placeholder-msg">Loading exercises...</p>
@@ -283,7 +299,7 @@
       <div id="editor-toolbar">
         <div class="actions">
           <button id="run-btn" disabled>Run</button>
-          <button id="reset-btn" disabled>Reset DB</button>
+          <button id="reset-btn" disabled>Reset</button>
         </div>
         <span class="shortcut-hint" id="shortcut-hint"></span>
       </div>
@@ -293,7 +309,7 @@
         autocomplete="off"
         autocorrect="off"
         autocapitalize="off"
-        placeholder="-- Write SQL here"
+        placeholder="# Write Python here"
       ></textarea>
     </div>
     <div id="h-splitter" class="splitter splitter-h"></div>
@@ -301,7 +317,7 @@
       <div id="results-meta"></div>
       <div id="results-scroll">
         <div id="results-content">
-          <p class="placeholder-msg">Run a query to see results here.</p>
+          <p class="placeholder-msg">Run code to see results here.</p>
         </div>
       </div>
     </div>
@@ -311,17 +327,117 @@
 <noscript>
   <div style="padding:40px;text-align:center;font-family:sans-serif;">
     <h2>JavaScript Required</h2>
-    <p>This SQL practice tool runs DuckDB in your browser and requires JavaScript.</p>
+    <p>This Python practice tool runs Pyodide in your browser and requires JavaScript.</p>
   </div>
 </noscript>
 
 <script type="module">
-  import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.32.0/+esm';
   import { marked } from 'https://cdn.jsdelivr.net/npm/marked@17.0.4/+esm';
   import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.3.3/+esm';
 
-  // Cache-bust local fetches so GitHub Pages CDN updates take effect
   const CACHE_V = '?v=' + Date.now();
+
+  const CSV_FILES = [
+    'dim_consultant.csv', 'dim_diagnostic.csv', 'dim_medication.csv',
+    'dim_patient.csv', 'dim_procedure.csv', 'dim_theatre.csv', 'dim_ward.csv',
+    'fact_admission.csv', 'fact_appointment_attended.csv',
+    'fact_cancer_first_seen.csv', 'fact_cancer_referral.csv',
+    'fact_death_record.csv', 'fact_diagnostic_ordered.csv',
+    'fact_diagnostic_performed.csv', 'fact_discharge.csv',
+    'fact_dtoc_assessment.csv', 'fact_ed_arrival.csv', 'fact_ed_assessment.csv',
+    'fact_fft_response.csv', 'fact_icu_care.csv', 'fact_journey_states.csv',
+    'fact_medication_administered.csv', 'fact_pre_op_assessment.csv',
+    'fact_referral_created.csv', 'fact_safety_incident.csv',
+    'fact_surgeon_assigned.csv', 'fact_surgery_performed.csv',
+    'fact_triage.csv', 'fact_ward_assignment.csv',
+  ];
+
+  // Python code that sets up the execution environment
+  const PYTHON_INIT = `
+import matplotlib
+matplotlib.use('agg')
+import warnings
+warnings.filterwarnings('ignore', message='.*FigureCanvasAgg is non-interactive.*')
+warnings.filterwarnings('ignore', message='.*Adding/subtracting object-dtype.*')
+
+_ns = {}
+exec('''
+import pandas as pd
+import numpy as np
+import matplotlib
+matplotlib.use("agg")
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings("ignore", message=".*FigureCanvasAgg is non-interactive.*")
+warnings.filterwarnings("ignore", message=".*Adding/subtracting object-dtype.*")
+''', _ns)
+
+def _execute(code):
+    import sys, io, base64, ast, traceback, json
+
+    old_stdout = sys.stdout
+    sys.stdout = io.StringIO()
+
+    result = {'stdout': '', 'html': '', 'figures': '', 'error': ''}
+
+    try:
+        tree = ast.parse(code)
+        if tree.body and isinstance(tree.body[-1], ast.Expr):
+            if len(tree.body) > 1:
+                mod = ast.Module(body=tree.body[:-1], type_ignores=[])
+                exec(compile(mod, '<user>', 'exec'), _ns)
+            val = eval(compile(ast.Expression(body=tree.body[-1].value), '<user>', 'eval'), _ns)
+            if val is not None:
+                try:
+                    import pandas as _pd
+                    if isinstance(val, _pd.DataFrame):
+                        result['html'] = val.to_html(max_rows=200, border=0)
+                    elif isinstance(val, _pd.Series):
+                        result['html'] = val.to_frame().to_html(max_rows=200, border=0)
+                    else:
+                        print(repr(val))
+                except ImportError:
+                    print(repr(val))
+        else:
+            exec(compile(tree, '<user>', 'exec'), _ns)
+    except Exception:
+        result['error'] = traceback.format_exc()
+
+    result['stdout'] = sys.stdout.getvalue()
+    sys.stdout = old_stdout
+
+    try:
+        import matplotlib.pyplot as _plt
+        if _plt.get_fignums():
+            figs = ''
+            for num in _plt.get_fignums():
+                buf = io.BytesIO()
+                _plt.figure(num).savefig(buf, format='png', dpi=100,
+                    bbox_inches='tight', facecolor='white', edgecolor='none')
+                buf.seek(0)
+                b64 = base64.b64encode(buf.read()).decode()
+                figs += '<img src="data:image/png;base64,' + b64 + '" style="max-width:100%">'
+            result['figures'] = figs
+            _plt.close('all')
+    except Exception:
+        pass
+
+    return json.dumps(result)
+
+def _reset_ns():
+    global _ns
+    _ns.clear()
+    exec('''
+import pandas as pd
+import numpy as np
+import matplotlib
+matplotlib.use("agg")
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings("ignore", message=".*FigureCanvasAgg is non-interactive.*")
+warnings.filterwarnings("ignore", message=".*Adding/subtracting object-dtype.*")
+''', _ns)
+`;
 
   // ── DOM refs ───────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
@@ -344,7 +460,7 @@
   const hSplitter       = $('h-splitter');
   const collapseBtn     = $('collapse-btn');
 
-  let db = null, conn = null;
+  let pyodide = null;
 
   const modKey = /Mac|iPhone|iPad/.test(navigator.platform) ? '\u2318' : 'Ctrl';
   $('shortcut-hint').textContent = `${modKey}+Enter to run \u00b7 Tab indents`;
@@ -434,65 +550,62 @@
   async function init() {
     try {
       if (location.protocol === 'file:') {
-        throw new Error('Cannot load data from file://. Serve this folder with a local server:\n  python -m http.server\nThen open http://localhost:8000');
+        throw new Error('Cannot load data from file://. Serve this folder with a local server:\n  python -m http.server\nThen open http://localhost:8000/python.html');
       }
 
-      // 1. Boot DuckDB-WASM
-      loadingMessage.textContent = 'Loading DuckDB engine\u2026';
-      const bundles = duckdb.getJsDelivrBundles();
-      const bundle = await duckdb.selectBundle(bundles);
-      const workerUrl = URL.createObjectURL(
-        new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
-      );
-      const worker = new Worker(workerUrl);
-      db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker);
-      await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-      URL.revokeObjectURL(workerUrl);
-      conn = await db.connect();
+      // 1. Load Pyodide runtime
+      loadingMessage.textContent = 'Loading Python runtime\u2026';
+      loadingBar.style.width = '5%';
+      const { loadPyodide } = await import('https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.mjs');
+      pyodide = await loadPyodide();
+      loadingBar.style.width = '25%';
 
-      // 2. Fetch build script + exercises in parallel
-      loadingMessage.textContent = 'Fetching schema\u2026';
-      const [buildSql] = await Promise.all([
-        fetch('./build_db.sql' + CACHE_V).then(r => { if (!r.ok) throw new Error('Failed to load build_db.sql'); return r.text(); }),
-        loadExercises(),
-      ]);
+      // 2. Load scientific packages + fetch exercises in parallel
+      loadingMessage.textContent = 'Installing packages\u2026';
+      const packagesPromise = pyodide.loadPackage(['pandas', 'matplotlib', 'scipy', 'scikit-learn', 'micropip']);
+      const exercisesPromise = loadExercises();
 
-      // 3. Extract CSV paths from build_db.sql
-      const csvPaths = [...new Set(
-        [...buildSql.matchAll(/read_csv\w*\(\s*'([^']+)'/g)].map(m => m[1])
-      )];
-
-      // 4. Fetch and register all CSVs
-      let loaded = 0;
-      const total = csvPaths.length;
-      loadingMessage.textContent = `Loading data (0/${total})\u2026`;
-
-      await Promise.all(csvPaths.map(async (path) => {
-        const resp = await fetch('./' + path + CACHE_V);
-        if (!resp.ok) throw new Error(`Failed to fetch ${path}`);
-        await db.registerFileText(path, await resp.text());
-        loaded++;
-        loadingMessage.textContent = `Loading data (${loaded}/${total})\u2026`;
-        loadingBar.style.width = `${(loaded / total) * 100}%`;
+      // 3. Fetch CSV data in parallel
+      const csvPromise = Promise.all(CSV_FILES.map(async (f) => {
+        const resp = await fetch('./data/' + f + CACHE_V);
+        if (!resp.ok) throw new Error('Failed to fetch ' + f);
+        return [f, await resp.text()];
       }));
 
-      // 5. Execute CREATE TABLE statements
-      loadingMessage.textContent = 'Creating tables\u2026';
-      const statements = buildSql
-        .split(';')
-        .map(s => s.trim())
-        .filter(s => s && !s.split('\n').every(l => !l.trim() || l.trim().startsWith('--')));
-      for (const stmt of statements) {
-        await conn.query(stmt);
-      }
+      await packagesPromise;
+      loadingBar.style.width = '55%';
 
-      // 6. Ready
+      // 4. Install seaborn via micropip
+      loadingMessage.textContent = 'Installing seaborn\u2026';
+      await pyodide.runPythonAsync(`
+import micropip
+await micropip.install('seaborn')
+`);
+      loadingBar.style.width = '65%';
+
+      // 5. Wait for CSV data and write to virtual FS
+      loadingMessage.textContent = 'Loading dataset\u2026';
+      const csvData = await csvPromise;
+      await exercisesPromise;
+
+      try { pyodide.FS.mkdir('data'); } catch {}
+      for (const [name, content] of csvData) {
+        pyodide.FS.writeFile('data/' + name, content);
+      }
+      loadingBar.style.width = '85%';
+
+      // 6. Set up Python environment
+      loadingMessage.textContent = 'Initializing environment\u2026';
+      await pyodide.runPythonAsync(PYTHON_INIT);
+      loadingBar.style.width = '100%';
+
+      // 7. Ready
       loadingOverlay.classList.add('hidden');
-      dbStatus.textContent = `${total} tables loaded`;
+      dbStatus.textContent = `${CSV_FILES.length} tables \u00b7 pandas \u00b7 matplotlib \u00b7 seaborn \u00b7 scipy \u00b7 sklearn`;
       runBtn.disabled = false;
       resetBtn.disabled = false;
       editorPanel.style.height = Math.round(mainPanel.getBoundingClientRect().height * 0.4) + 'px';
-      editor.value = 'SHOW TABLES;';
+      editor.value = 'import pandas as pd\n\n# List all available CSV files\nimport os\nfor f in sorted(os.listdir("data")):\n    print(f)';
       editor.focus();
       editor.setSelectionRange(0, editor.value.length);
 
@@ -508,22 +621,19 @@
 
   async function loadExercises() {
     try {
-      const resp = await fetch('./exercises.md' + CACHE_V);
+      const resp = await fetch('./python_exercises.md' + CACHE_V);
       if (!resp.ok) throw new Error();
       exercisesEl.innerHTML = DOMPurify.sanitize(marked.parse(await resp.text()));
     } catch {
       exercisesEl.innerHTML =
-        '<p class="placeholder-msg">Could not load exercises. <a href="exercises.md">View exercises.md directly</a>.</p>';
+        '<p class="placeholder-msg">Could not load exercises. <a href="python_exercises.md">View python_exercises.md directly</a>.</p>';
     }
   }
 
-  // ── Query Execution ────────────────────────────────────────
-  const MAX_ROWS = 500;
-  const TIMEOUT_MS = 10_000;
-
-  async function runQuery() {
-    const sql = editor.value.trim();
-    if (!sql || !conn) return;
+  // ── Code Execution ────────────────────────────────────────
+  async function runCode() {
+    const code = editor.value.trim();
+    if (!code || !pyodide) return;
 
     runBtn.disabled = true;
     resultsMeta.textContent = 'Running\u2026';
@@ -531,17 +641,9 @@
 
     const t0 = performance.now();
     try {
-      const stmts = sql.split(';').map(s => s.trim()).filter(Boolean);
-      let result = null;
-      for (const stmt of stmts) {
-        const timeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error(
-            'Query timed out (10 second limit). Try adding a LIMIT clause or simplifying.'
-          )), TIMEOUT_MS)
-        );
-        result = await Promise.race([conn.query(stmt), timeout]);
-      }
-      renderResults(result, elapsed(t0));
+      const resultJson = await pyodide.runPythonAsync(`_execute(${JSON.stringify(code)})`);
+      const r = JSON.parse(resultJson);
+      renderResults(r, elapsed(t0));
     } catch (err) {
       resultsMeta.textContent = `Error \u00b7 ${elapsed(t0)}`;
       resultsContent.innerHTML = `<div class="error-msg">${esc(err.message)}</div>`;
@@ -553,54 +655,28 @@
   function elapsed(t0) { return ((performance.now() - t0) / 1000).toFixed(2) + 's'; }
 
   // ── Render Results ─────────────────────────────────────────
-  function renderResults(table, time) {
-    if (!table || table.numRows === 0) {
-      const ncols = table ? table.schema.fields.length : 0;
-      resultsMeta.textContent = `0 rows \u00b7 ${ncols} columns \u00b7 ${time}`;
-      resultsContent.innerHTML = '<p class="placeholder-msg">Query returned no rows.</p>';
-      return;
+  function renderResults(r, time) {
+    let html = '';
+
+    if (r.error) {
+      html += `<div class="error-msg">${esc(r.error)}</div>`;
+    }
+    if (r.stdout) {
+      html += `<pre class="stdout">${esc(r.stdout)}</pre>`;
+    }
+    if (r.html) {
+      html += `<div class="df-output">${DOMPurify.sanitize(r.html)}</div>`;
+    }
+    if (r.figures) {
+      html += `<div class="fig-output">${DOMPurify.sanitize(r.figures)}</div>`;
     }
 
-    const fields = table.schema.fields;
-    const cols = fields.map(f => f.name);
-    const colTypes = fields.map(f => {
-      const t = f.type;
-      if (t.typeId === 8 /* Date */) return 'date';
-      if (t.typeId === 10 /* Timestamp */) return 'timestamp';
-      return null;
-    });
-    const total = table.numRows;
-    const limit = Math.min(total, MAX_ROWS);
-    const rows = table.toArray();
-
-    let html = '<table><thead><tr>';
-    for (const c of cols) html += `<th>${esc(c)}</th>`;
-    html += '</tr></thead><tbody>';
-
-    for (let i = 0; i < limit; i++) {
-      html += '<tr>';
-      for (let j = 0; j < cols.length; j++) html += `<td>${fmtVal(rows[i][cols[j]], colTypes[j])}</td>`;
-      html += '</tr>';
+    if (!html) {
+      html = '<p class="placeholder-msg">Code executed successfully (no output).</p>';
     }
-    html += '</tbody></table>';
 
-    const trunc = total > MAX_ROWS ? ` (showing first ${MAX_ROWS})` : '';
-    resultsMeta.textContent = `${total} rows \u00b7 ${cols.length} columns \u00b7 ${time}${trunc}`;
+    resultsMeta.textContent = r.error ? `Error \u00b7 ${time}` : `Done \u00b7 ${time}`;
     resultsContent.innerHTML = html;
-  }
-
-  function fmtVal(v, colType) {
-    if (v === null || v === undefined) return '<span class="null">NULL</span>';
-    if (colType === 'date') {
-      const d = new Date(typeof v === 'bigint' ? Number(v) : v);
-      return esc(d.toISOString().slice(0, 10));
-    }
-    if (colType === 'timestamp' || v instanceof Date) {
-      const d = v instanceof Date ? v : new Date(typeof v === 'bigint' ? Number(v) / 1000 : v);
-      return esc(d.toISOString().replace('T', ' ').replace(/\.000Z$/, ''));
-    }
-    if (typeof v === 'bigint') return esc(Number(v).toString());
-    return esc(String(v));
   }
 
   function esc(s) {
@@ -608,51 +684,52 @@
   }
 
   // ── Reset ──────────────────────────────────────────────────
-  async function resetDB() {
+  async function resetEnv() {
     runBtn.disabled = true;
     resetBtn.disabled = true;
     resultsContent.innerHTML = '';
-    resultsMeta.textContent = '';
-    if (conn) { try { await conn.close(); } catch {} }
-    if (db) { try { await db.terminate(); } catch {} }
-    db = null; conn = null;
-    loadingBar.style.width = '0%';
-    loadingOverlay.classList.remove('hidden');
-    await init();
+    resultsMeta.textContent = 'Resetting\u2026';
+    try {
+      await pyodide.runPythonAsync('_reset_ns()');
+      resultsMeta.textContent = '';
+      resultsContent.innerHTML = '<p class="placeholder-msg">Environment reset. All variables cleared.</p>';
+    } catch (err) {
+      resultsMeta.textContent = 'Reset failed';
+      resultsContent.innerHTML = `<div class="error-msg">${esc(err.message)}</div>`;
+    }
+    runBtn.disabled = false;
+    resetBtn.disabled = false;
   }
 
   // ── Event Handlers ─────────────────────────────────────────
-  runBtn.addEventListener('click', runQuery);
-  resetBtn.addEventListener('click', resetDB);
+  runBtn.addEventListener('click', runCode);
+  resetBtn.addEventListener('click', resetEnv);
 
   editor.addEventListener('keydown', (e) => {
-    // Run query
+    // Run code
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
-      runQuery();
+      runCode();
       return;
     }
-    // Tab inserts two spaces
+    // Tab inserts four spaces
     if (e.key === 'Tab') {
       e.preventDefault();
       const pos = editor.selectionStart;
-      editor.value = editor.value.substring(0, pos) + '  ' + editor.value.substring(editor.selectionEnd);
-      editor.selectionStart = editor.selectionEnd = pos + 2;
+      editor.value = editor.value.substring(0, pos) + '    ' + editor.value.substring(editor.selectionEnd);
+      editor.selectionStart = editor.selectionEnd = pos + 4;
     }
   });
 
-  // Click SQL code blocks in exercises to load into editor
+  // Click Python code blocks in exercises to load into editor
   exercisesEl.addEventListener('click', (e) => {
     const pre = e.target.closest('#exercises-content pre');
     if (!pre) return;
     const code = pre.querySelector('code');
-    if (!code) return;
-    const text = code.textContent;
-    if (/^\s*(SELECT|WITH|CREATE|INSERT|UPDATE|DELETE|SHOW|DESCRIBE|DROP|ALTER)\b/i.test(text)) {
-      editor.value = text;
-      editor.focus();
-      editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    if (!code || !code.classList.contains('language-python')) return;
+    editor.value = code.textContent;
+    editor.focus();
+    editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
 
   // ── Start ──────────────────────────────────────────────────
