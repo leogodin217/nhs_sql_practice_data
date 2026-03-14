@@ -1,6 +1,6 @@
 # NHS Practice Exercises
 
-**Dataset:** Millbrook NHS Trust (simulated)
+**Dataset:** Millbrook NHS Trust
 **Format:** DuckDB
 
 ## Getting Started
@@ -167,7 +167,7 @@ Notice how each dimension table maps to a specific foreign key in the fact table
 
 ### Exercise 3: "What happened on A&E's busiest day?"
 
-The ops team wants a recap of the single busiest day in A&E -- how many arrivals and what triage categories.
+The ops team wants a recap of the single busiest day in A&E -- how many arrivals, what triage categories, and whether there's a pattern to when the busy days fall.
 
 <details>
 <summary>Hints</summary>
@@ -175,6 +175,7 @@ The ops team wants a recap of the single busiest day in A&E -- how many arrivals
 - How do you find the busiest day if you don't know which day it is?
 - Can you do this in one query, or do you need to find the day first?
 - What does "busiest" mean -- most arrivals?
+- After finding the busiest day, look at the top 10. Do they cluster on certain days of the week or certain times of year?
 
 </details>
 
@@ -202,27 +203,116 @@ GROUP BY triage.triage_category
 ORDER BY triage.triage_category;
 ```
 
+**Top 10 busiest days -- what day of the week are they?**
+
+```sql
+SELECT
+    timestamp::DATE AS day,
+    DAYNAME(timestamp) AS day_of_week,
+    COUNT(*) AS arrivals
+FROM fact_ed_arrival
+GROUP BY day, day_of_week
+ORDER BY arrivals DESC
+LIMIT 10;
+```
+
+**Average arrivals by day of week:**
+
+```sql
+SELECT
+    DAYNAME(timestamp) AS day_of_week,
+    EXTRACT(ISODOW FROM timestamp)::INTEGER AS day_num,
+    COUNT(*) AS total_arrivals,
+    ROUND(COUNT(*) * 1.0 / COUNT(DISTINCT timestamp::DATE), 1) AS avg_per_day
+FROM fact_ed_arrival
+GROUP BY day_of_week, day_num
+ORDER BY day_num;
+```
+
 </details>
 
 <details>
 <summary>Discussion</summary>
 
-Check which day comes out on top -- is it a date that makes clinical sense? A&E spikes often align with bank holidays, major events, or seasonal surges. The triage breakdown shows the distribution across categories 1 (immediate) through 5 (non-urgent).
+Check which day comes out on top -- is it a date that makes clinical sense? A&E spikes often align with bank holidays, major events, or seasonal surges.
 
-Try running the top-10 busiest days to see the pattern. Do they cluster in certain seasons or around specific events?
+The day-of-week breakdown should reveal a clear operational pattern. Mondays typically see the highest volumes (patients who avoided A&E over the weekend now present), while weekends are quieter. This is a well-known NHS pattern and one of the first things an ops manager checks.
+
+Try running the top-10 busiest days and checking both the day of week and the month. Do they cluster in winter? On Mondays?
 
 </details>
 
 ---
 
-### Exercise 4: "What does our patient population look like?"
+### Exercise 4: "Why does the ops team dread Mondays?"
 
-The Population Health team wants a demographic profile of the trust's patients.
+The Emergency Department lead has a theory that Mondays are significantly worse than other days. Is there real data behind this, or is it just perception?
 
 <details>
 <summary>Hints</summary>
 
-- What demographic fields does `dim_patient` have?
+- Group ED arrivals by day of week. DuckDB has `DAYNAME()` and `EXTRACT(ISODOW FROM ...)`.
+- Raw totals won't work fairly -- are there the same number of Mondays as Tuesdays in three years? Use an average per day.
+- Is the Monday effect consistent across all three years, or has it changed?
+- What about weekends? Are they quieter?
+
+</details>
+
+<details>
+<summary>Solution</summary>
+
+**Average daily arrivals by day of week:**
+
+```sql
+SELECT
+    DAYNAME(timestamp) AS day_of_week,
+    EXTRACT(ISODOW FROM timestamp)::INTEGER AS day_num,
+    COUNT(*) AS total_arrivals,
+    COUNT(DISTINCT timestamp::DATE) AS num_days,
+    ROUND(COUNT(*) * 1.0 / COUNT(DISTINCT timestamp::DATE), 1) AS avg_arrivals_per_day
+FROM fact_ed_arrival
+GROUP BY day_of_week, day_num
+ORDER BY day_num;
+```
+
+**Monday effect by year:**
+
+```sql
+SELECT
+    EXTRACT(YEAR FROM timestamp)::INTEGER AS yr,
+    DAYNAME(timestamp) AS day_of_week,
+    EXTRACT(ISODOW FROM timestamp)::INTEGER AS day_num,
+    ROUND(COUNT(*) * 1.0 / COUNT(DISTINCT timestamp::DATE), 1) AS avg_arrivals
+FROM fact_ed_arrival
+GROUP BY yr, day_of_week, day_num
+ORDER BY yr, day_num;
+```
+
+</details>
+
+<details>
+<summary>Discussion</summary>
+
+Monday should show notably higher average arrivals than midweek, with Saturday and Sunday significantly lower. This is a well-documented NHS pattern -- patients who avoid A&E over the weekend present on Monday, GPs refer urgently after weekend on-call, and elective pathways resume.
+
+The weekend effect matters for staffing. If Sunday averages half of Monday's volume, that's a very different rota requirement. Check whether the pattern is stable across years or whether the gap is widening as the trust grows.
+
+This kind of day-of-week analysis is one of the first things an operational analyst does. It directly informs staffing models, ambulance divert policies, and bed planning.
+
+</details>
+
+---
+
+## Digging In
+
+### Exercise 5: "What does our patient population look like?"
+
+The Population Health team wants a profile of the trust's patient population -- what's the clinical mix and who are we serving?
+
+<details>
+<summary>Hints</summary>
+
+- What patient characteristic fields does `dim_patient` have?
 - Should you use all rows or just current patients?
 - What's IMD and why might it matter?
 
@@ -272,7 +362,7 @@ ORDER BY imd_decile;
 <details>
 <summary>Discussion</summary>
 
-You should see roughly 55% elective, 35% emergency, and 10% cancer pathway patients. Cardiac is the most common primary condition, followed by respiratory and orthopaedic.
+This gives you the clinical mix of the trust's population. You should see roughly 55% elective, 35% emergency, and 10% cancer pathway patients. Cardiac is the most common primary condition, followed by respiratory and orthopaedic.
 
 IMD (Index of Multiple Deprivation) deciles range from 1 (most deprived) to 10 (least deprived). The distribution here skews toward more deprived deciles, with roughly 5x more patients in decile 1 than decile 10. This kind of skew is common in urban acute trusts serving deprived catchment areas -- a London teaching hospital would look very different from a rural district general.
 
@@ -282,9 +372,7 @@ Keep the IMD data in mind -- we'll come back to it when looking at health inequa
 
 ---
 
-## Digging In
-
-### Exercise 5: "Are we hitting the 4-hour A&E target?"
+### Exercise 6: "Are we hitting the 4-hour A&E target?"
 
 The Chief Operating Officer needs to know: what percentage of A&E patients are seen within 4 hours? The NHS target is 78% by March 2026.
 
@@ -295,7 +383,7 @@ The Chief Operating Officer needs to know: what percentage of A&E patients are s
 - How do you connect an arrival to an assessment for the same patient visit?
 - What column links events from the same A&E attendance?
 - Not all arrivals have an assessment. What happened to those patients?
-- The dataset spans multiple years. Does the COO want the all-time rate or a recent period?
+- The data spans multiple years. Does the COO want the all-time rate or a recent period?
 
 </details>
 
@@ -322,7 +410,9 @@ JOIN fact_ed_assessment assessment
 <details>
 <summary>Discussion</summary>
 
-Check the percentage against the 78% target. Is the trust hitting it?
+**Important caveat:** The NHS 4-hour standard measures arrival-to-*departure* (the total time a patient spends in A&E), not arrival-to-assessment. The data here doesn't include an ED departure event, so we're measuring time-to-assessment as a proxy. This is still a useful operational metric -- long waits before assessment indicate flow problems -- but it should not be confused with the headline 4-hour standard reported nationally.
+
+Check the percentage against the 78% target. Is the trust hitting it (keeping in mind the proxy caveat above)?
 
 Now compare row counts between the arrival and assessment tables. There's a gap -- patients who left before being seen. Should they count as a breach? In real NHS reporting, they do. The percentage above is optimistic because it only measures patients who actually got assessed.
 
@@ -334,7 +424,7 @@ Try filtering to the most recent 12 months and compare. A COO probably wants the
 
 ---
 
-### Exercise 6: "How long are patients staying?"
+### Exercise 7: "How long are patients staying?"
 
 The bed management team wants to know the average length of stay for inpatients. NHS benchmark is 4-5 days.
 
@@ -405,7 +495,7 @@ ORDER BY mean_los DESC, primary_condition;
 
 Check against the NHS benchmark of 4-5 days. The `MIN()` aggregation is important here: some spells have multiple admission records (when a patient is transferred between consultant episodes within the same spell), so we need the earliest admission timestamp.
 
-Compare completed spells to total admission `spell_id` values -- you'll see a significant gap. The difference represents "open" spells still in progress when the dataset ends. This is normal for a point-in-time snapshot -- you can only measure ALOS on completed spells.
+Compare completed spells to total admission `spell_id` values -- you'll see a significant gap. The difference represents "open" spells still in progress at the latest reporting date. This is normal for a point-in-time snapshot -- you can only measure ALOS on completed spells.
 
 Try segmenting by primary condition. Is there a meaningful difference between cardiac and orthopaedic patients? What about by comorbidity count?
 
@@ -413,7 +503,7 @@ Try segmenting by primary condition. Is there a meaningful difference between ca
 
 ---
 
-### Exercise 7: "How many referrals actually turn into appointments?"
+### Exercise 8: "How many referrals actually turn into appointments?"
 
 The outpatient services manager is worried about the gap between referrals and attended appointments.
 
@@ -472,13 +562,13 @@ The fact tables only capture events that happened. If a patient was referred but
 
 Referrals from the most recent months inflate the dropout rate (right-censoring) -- those patients simply haven't had time to attend yet. Try limiting to earlier years and see if the conversion rate improves.
 
-Note: `fact_appointment_attended` only records attended appointments. DNA and cancellation events aren't captured as fact table records in this dataset.
+Note: `fact_appointment_attended` only records attended appointments. DNA and cancellation events aren't captured as fact table records in the available data.
 
 </details>
 
 ---
 
-### Exercise 8: "Are patients satisfied with their care?"
+### Exercise 9: "Are patients satisfied with their care?"
 
 The Patient Experience team needs the latest Friends and Family Test results for the board report.
 
@@ -534,7 +624,7 @@ The national average positive rate (scores 4-5) is typically around 85-90%. How 
 
 ## Putting Knowledge to Use
 
-### Exercise 9: "Which consultants carry the heaviest load?"
+### Exercise 10: "Which consultants carry the heaviest load?"
 
 The Clinical Director wants to understand workload distribution across the medical staff.
 
@@ -587,7 +677,7 @@ ORDER BY total_admissions DESC;
 
 Respiratory consultants handle the most admissions, followed by general and cardiac. Try joining admissions to patient condition and consultant specialty to see how conditions align with specialty groups.
 
-Notice the clinical coherence: cardiac patients are always seen by cardiac consultants, respiratory patients by respiratory consultants, and so on. This is a designed feature of the dataset -- try verifying it by joining admissions to patient condition and consultant specialty.
+In this trust's data, specialist conditions are always routed to the matching specialty group -- cardiac patients are seen by cardiac consultants, respiratory by respiratory, and so on. This perfect alignment is worth noting: real hospitals sometimes have crossover (a general medicine consultant covering respiratory patients during a staffing gap, for example). Try verifying the pattern by joining admissions to patient condition and consultant specialty.
 
 You could extend this by looking at surgeon workload (`fact_surgeon_assigned`), or by computing events-per-consultant to find if any individual is overloaded relative to peers.
 
@@ -597,7 +687,7 @@ Try grouping by year to see if workload patterns are shifting. A staffing decisi
 
 ---
 
-### Exercise 10: "What procedures generate the most income?"
+### Exercise 11: "What procedures generate the most income?"
 
 Finance wants a breakdown of surgical procedure tariffs by complexity.
 
@@ -657,7 +747,7 @@ Try calculating total tariff income per specialty group by multiplying tariff by
 
 ---
 
-### Exercise 11: "Are cancer patients being seen fast enough?"
+### Exercise 12: "Are cancer patients being seen fast enough?"
 
 The Cancer Services lead needs to report on the 28-day Faster Diagnosis Standard. NHS target: 75% of urgently-referred cancer patients seen within 28 days.
 
@@ -713,7 +803,7 @@ Try breaking down by quarter across all years to see the trend. Also try joining
 
 ---
 
-### Exercise 12: "How are the diagnostics team performing?"
+### Exercise 13: "How are the diagnostics team performing?"
 
 The Diagnostics lead wants to know: are we hitting the 6-week diagnostic wait target? NHS standard is 99% within 42 days.
 
@@ -724,7 +814,7 @@ The Diagnostics lead wants to know: are we hitting the 6-week diagnostic wait ta
 - Same `request_id` links an order to its completion.
 - Not all ordered tests get performed. What percentage complete?
 - Join to `dim_diagnostic` to break down by test type.
-- NHS reports diagnostics monthly. Should you measure the entire dataset or a recent window?
+- NHS reports diagnostics monthly. Should you measure the entire period or a recent window?
 
 </details>
 
@@ -794,9 +884,93 @@ Try the monthly breakdown to spot trends. Also break down by test type to identi
 
 ---
 
+### Exercise 14: "What are we prescribing?"
+
+The Chief Pharmacist wants to understand prescribing patterns across the trust. Which medications are most commonly administered, and do prescribing patterns differ by condition?
+
+<details>
+<summary>Hints</summary>
+
+- `fact_medication_administered` links to `dim_medication` (via `medication_id`) and to spells (via `spell_id`).
+- `dim_medication` has `medication_name`, `bnf_category`, `route`, and `daily_cost`.
+- Join through `fact_admission` to get `patient_id`, then to `dim_patient` for condition.
+- Think about what the Chief Pharmacist actually wants: volume (most prescribed), cost (most expensive), or clinical appropriateness (right drug for right condition)?
+
+</details>
+
+<details>
+<summary>Solution</summary>
+
+**Top medications by volume:**
+
+```sql
+SELECT
+    medication.medication_name,
+    medication.bnf_category,
+    medication.route,
+    COUNT(*) AS times_administered
+FROM fact_medication_administered administered
+JOIN dim_medication medication
+    ON administered.medication_id = medication.id
+GROUP BY medication.medication_name, medication.bnf_category, medication.route
+ORDER BY times_administered DESC
+LIMIT 15;
+```
+
+**Prescribing by condition:**
+
+```sql
+SELECT
+    patient.primary_condition,
+    medication.bnf_category,
+    COUNT(*) AS administrations
+FROM fact_medication_administered administered
+JOIN fact_admission admission
+    ON administered.spell_id = admission.spell_id
+JOIN dim_patient patient
+    ON admission.patient_id = patient.id AND patient.valid_to IS NULL
+JOIN dim_medication medication
+    ON administered.medication_id = medication.id
+GROUP BY patient.primary_condition, medication.bnf_category
+ORDER BY patient.primary_condition, administrations DESC;
+```
+
+**Estimated medication cost by spell:**
+
+```sql
+SELECT
+    admission.spell_id,
+    admission.patient_id,
+    SUM(medication.daily_cost) AS total_med_cost,
+    COUNT(*) AS administrations
+FROM fact_medication_administered administered
+JOIN fact_admission admission
+    ON administered.spell_id = admission.spell_id
+JOIN dim_medication medication
+    ON administered.medication_id = medication.id
+GROUP BY admission.spell_id, admission.patient_id
+ORDER BY total_med_cost DESC
+LIMIT 15;
+```
+
+</details>
+
+<details>
+<summary>Discussion</summary>
+
+Check whether prescribing patterns align with conditions. Do cardiac patients receive more antiplatelets and beta-blockers? Do respiratory patients get more inhalers and antibiotics? If you see unexpected patterns (e.g., medications typically associated with one specialty appearing frequently in another), consider whether that could reflect comorbidities or a data quality issue worth flagging.
+
+The BNF (British National Formulary) category groups medications by therapeutic class. Grouping at this level is more useful than individual medications for spotting patterns.
+
+The cost analysis gives the Chief Pharmacist a starting point for medicines optimisation -- are there high-cost medications being used frequently where cheaper alternatives exist? This is a real and active area of NHS cost improvement.
+
+</details>
+
+---
+
 ## This Is Getting Harder
 
-### Exercise 13: "What happens to A&E patients after they're admitted?"
+### Exercise 15: "What happens to A&E patients after they're admitted?"
 
 The Emergency Medicine consultant wants to understand: when an A&E patient gets admitted, how long is their inpatient stay? Are ED admissions different from elective admissions?
 
@@ -818,14 +992,14 @@ The Emergency Medicine consultant wants to understand: when an A&E patient gets 
 WITH ed_patients AS (
     SELECT
         patient_id,
-        attendance_id AS ed_instance,
+        attendance_id AS ed_attendance,
         timestamp AS ed_arrival_ts
     FROM fact_ed_arrival
 ),
 ip_spells AS (
     SELECT
         admission.patient_id,
-        admission.spell_id AS ip_instance,
+        admission.spell_id AS ip_spell,
         MIN(admission.timestamp) AS admit_ts,
         MIN(discharge.timestamp) AS discharge_ts
     FROM fact_admission admission
@@ -852,15 +1026,15 @@ This is a fuzzy temporal join -- the same technique used with real NHS data. The
 
 The 24-hour window is a reasonable heuristic. In real NHS data linkage, analysts often use shorter windows (4-8 hours) but the principle is the same. This kind of cross-process joining is one of the most important skills in healthcare analytics.
 
-Compare the ALOS of ED-origin admissions to the overall figure. Are emergency admissions longer or shorter?
+Compare the ALOS of ED-origin admissions to the overall figure. You may find little or no difference here. In real NHS data, emergency admissions typically have longer ALOS than elective admissions -- emergency patients are sicker, less clinically optimised, and more likely to develop complications. If the numbers look similar, that's still a valid finding worth reporting. The key skill in this exercise is the temporal join technique itself: linking two processes that share a patient but not a foreign key. This pattern comes up constantly in healthcare analytics.
 
 </details>
 
 ---
 
-### Exercise 14: "Are we readmitting too many patients?"
+### Exercise 16: "Are we readmitting too many patients?"
 
-The Quality Improvement team wants to know the 30-day readmission rate. NHS benchmark is 12-14% for emergency admissions.
+The Quality Improvement team wants to know the 30-day readmission rate. NHS benchmark is 12-14% for emergency admissions. They also want to know which patient groups are most at risk.
 
 <details>
 <summary>Hints</summary>
@@ -868,6 +1042,7 @@ The Quality Improvement team wants to know the 30-day readmission rate. NHS benc
 - A readmission is a new admission for the same patient within 30 days of a prior discharge.
 - You need completed spells (admission + discharge) to measure this.
 - Link sequential spells for the same `patient_id` and check the time gap.
+- Which patient characteristics might predict readmission? Check what fields `dim_patient` has.
 - Readmission rates can vary over time. Is the latest year more operationally relevant?
 
 </details>
@@ -901,24 +1076,431 @@ JOIN spells readmit
     AND EXTRACT(EPOCH FROM (readmit.admit_ts - prior.discharge_ts)) / 86400.0 <= 30;
 ```
 
+**Readmission rate by comorbidity count:**
+
+```sql
+WITH spells AS (
+    SELECT
+        admission.patient_id,
+        admission.spell_id,
+        MIN(admission.timestamp) AS admit_ts,
+        MIN(discharge.timestamp) AS discharge_ts
+    FROM fact_admission admission
+    JOIN fact_discharge discharge
+        ON admission.spell_id = discharge.spell_id
+    GROUP BY admission.patient_id, admission.spell_id
+),
+readmit_flags AS (
+    SELECT DISTINCT readmit.spell_id AS readmit_spell_id
+    FROM spells prior
+    JOIN spells readmit
+        ON prior.patient_id = readmit.patient_id
+        AND readmit.admit_ts > prior.discharge_ts
+        AND EXTRACT(EPOCH FROM (readmit.admit_ts - prior.discharge_ts)) / 86400.0 <= 30
+)
+SELECT
+    patient.comorbidity_count,
+    COUNT(DISTINCT spell.spell_id) AS total_spells,
+    COUNT(DISTINCT readmit.readmit_spell_id) AS readmissions,
+    ROUND(100.0 * COUNT(DISTINCT readmit.readmit_spell_id) / COUNT(DISTINCT spell.spell_id), 1) AS readmission_pct
+FROM spells spell
+JOIN dim_patient patient
+    ON spell.patient_id = patient.id AND patient.valid_to IS NULL
+LEFT JOIN readmit_flags readmit
+    ON spell.spell_id = readmit.readmit_spell_id
+GROUP BY patient.comorbidity_count
+ORDER BY patient.comorbidity_count;
+```
+
 </details>
 
 <details>
 <summary>Discussion</summary>
 
-Compare to the NHS benchmark of 12-14%. Is the trust within range?
+The NHS benchmark for 30-day emergency readmission is 12-14%. How does your result compare? A rate below this doesn't mean there's no problem -- look at the comorbidity breakdown. Is there a threshold where readmission risk jumps? This is the kind of risk stratification that Quality Improvement teams use to target interventions. Patients above a certain comorbidity count might benefit from enhanced discharge planning, follow-up calls, or community support.
 
-This query self-joins the spells CTE to find patients where a second admission occurs within 30 days of a prior discharge. The `DISTINCT` on `s2.spell_id` is important because a single readmission spell could match multiple prior discharges.
+Also consider right-censoring near the end of the reporting period -- patients discharged in the final month haven't had a full 30-day window to be readmitted, which artificially lowers the rate.
 
-Compare by year. Also consider right-censoring near the end of the dataset -- patients discharged in the final month haven't had a full 30-day window to be readmitted, which artificially lowers the rate.
-
-Try extending this by joining to `dim_patient` to see whether patients with higher comorbidity counts or frailty scores are more likely to be readmitted. That's the clinical insight the Quality Improvement team really wants.
+Try extending this by adding frailty score or primary condition to the stratification. Which combination of risk factors best predicts readmission?
 
 </details>
 
 ---
 
-### Exercise 15: "Which patients cost the most?"
+### Exercise 17: "What's our mortality rate?"
+
+The Medical Director needs the in-hospital mortality rate for the annual quality report. How does it break down by condition and has it changed over time?
+
+<details>
+<summary>Hints</summary>
+
+- `fact_death_record` captures in-hospital deaths linked by `spell_id`.
+- Crude mortality rate = deaths / total completed spells.
+- Not every spell ends in death -- most end in discharge. Both tables share `spell_id`.
+- Breaking down by condition requires joining to `dim_patient`.
+- Is the rate stable across years, or is there a trend?
+
+</details>
+
+<details>
+<summary>Solution</summary>
+
+**Crude in-hospital mortality rate:**
+
+```sql
+SELECT
+    (SELECT COUNT(DISTINCT spell_id) FROM fact_death_record) AS deaths,
+    COUNT(DISTINCT spell_id) AS total_spells,
+    ROUND(100.0 * (SELECT COUNT(DISTINCT spell_id) FROM fact_death_record)
+        / COUNT(DISTINCT spell_id), 2) AS mortality_pct
+FROM fact_admission;
+```
+
+**Mortality by primary condition:**
+
+```sql
+WITH spell_outcomes AS (
+    SELECT
+        admission.spell_id,
+        admission.patient_id,
+        CASE WHEN death.spell_id IS NOT NULL THEN 1 ELSE 0 END AS died
+    FROM (SELECT DISTINCT spell_id, patient_id FROM fact_admission) admission
+    LEFT JOIN (SELECT DISTINCT spell_id FROM fact_death_record) death
+        ON admission.spell_id = death.spell_id
+)
+SELECT
+    patient.primary_condition,
+    COUNT(*) AS total_spells,
+    SUM(outcome.died) AS deaths,
+    ROUND(100.0 * SUM(outcome.died) / COUNT(*), 2) AS mortality_pct
+FROM spell_outcomes outcome
+JOIN dim_patient patient
+    ON outcome.patient_id = patient.id AND patient.valid_to IS NULL
+GROUP BY patient.primary_condition
+ORDER BY mortality_pct DESC;
+```
+
+**Mortality trend by year:**
+
+```sql
+WITH spell_outcomes AS (
+    SELECT
+        admission.spell_id,
+        EXTRACT(YEAR FROM MIN(admission.timestamp))::INTEGER AS yr,
+        CASE WHEN death.spell_id IS NOT NULL THEN 1 ELSE 0 END AS died
+    FROM fact_admission admission
+    LEFT JOIN (SELECT DISTINCT spell_id FROM fact_death_record) death
+        ON admission.spell_id = death.spell_id
+    GROUP BY admission.spell_id, death.spell_id
+)
+SELECT
+    yr,
+    COUNT(*) AS total_spells,
+    SUM(died) AS deaths,
+    ROUND(100.0 * SUM(died) / COUNT(*), 2) AS mortality_pct
+FROM spell_outcomes
+GROUP BY yr
+ORDER BY yr;
+```
+
+</details>
+
+<details>
+<summary>Discussion</summary>
+
+In-hospital mortality rate is one of the most scrutinised metrics in NHS quality reporting. The Hospital Standardised Mortality Ratio (HSMR) adjusts for case-mix, but the crude rate is a starting point.
+
+Check whether certain conditions have higher mortality. Do the differences make clinical sense? If you see obstetric mortality rates of 1-2%, pause and think critically: the real obstetric in-hospital mortality rate in England is single digits per 100,000 deliveries. A rate hundreds of times higher than reality should trigger immediate scepticism. In a real trust, this would prompt a data quality investigation, not a clinical response. Always sanity-check rates against known clinical benchmarks -- an implausible rate is more likely a data issue than a genuine finding.
+
+Also check whether mortality is stable or trending over time. A rising rate alongside growing volumes might indicate capacity issues affecting patient safety.
+
+One thing to watch: the denominator matters. Using all admissions (including day cases and short elective stays) dilutes the rate. A more meaningful calculation would restrict to emergency admissions or specific high-risk cohorts. Try computing the rate for emergency admissions only and compare.
+
+</details>
+
+---
+
+### Exercise 18: "Are busy periods less safe?"
+
+The Patient Safety lead wants to know whether safety incidents correlate with operational pressure. When the hospital is under strain, do more things go wrong?
+
+<details>
+<summary>Hints</summary>
+
+- `fact_safety_incident` records incidents linked to `ward_id` and `spell_id`.
+- Monthly incident counts alone aren't useful -- you need to normalise by volume.
+- Compute incidents per 1,000 admissions (or bed-days) by month.
+- Overlay this with the monthly activity dashboard from Exercise 23. Do spikes align?
+- Which wards have the highest incident rates?
+
+</details>
+
+<details>
+<summary>Solution</summary>
+
+**Monthly incident rate:**
+
+```sql
+WITH monthly_incidents AS (
+    SELECT DATE_TRUNC('month', timestamp)::DATE AS month, COUNT(*) AS incidents
+    FROM fact_safety_incident GROUP BY month
+),
+monthly_admissions AS (
+    SELECT DATE_TRUNC('month', timestamp)::DATE AS month, COUNT(DISTINCT spell_id) AS admissions
+    FROM fact_admission GROUP BY month
+)
+SELECT
+    a.month,
+    a.admissions,
+    COALESCE(i.incidents, 0) AS incidents,
+    ROUND(1000.0 * COALESCE(i.incidents, 0) / a.admissions, 1) AS incidents_per_1000
+FROM monthly_admissions a
+LEFT JOIN monthly_incidents i
+    ON a.month = i.month
+ORDER BY a.month;
+```
+
+**Incidents by ward:**
+
+```sql
+SELECT
+    ward.ward_name,
+    ward.ward_type,
+    COUNT(*) AS incidents
+FROM fact_safety_incident incident
+JOIN dim_ward ward
+    ON incident.ward_id = ward.id
+GROUP BY ward.ward_name, ward.ward_type
+ORDER BY incidents DESC;
+```
+
+**Incident rate in winter vs summer:**
+
+```sql
+WITH incident_months AS (
+    SELECT
+        DATE_TRUNC('month', timestamp)::DATE AS month,
+        EXTRACT(MONTH FROM timestamp)::INTEGER AS mo,
+        COUNT(*) AS incidents
+    FROM fact_safety_incident
+    GROUP BY month, mo
+),
+admission_months AS (
+    SELECT
+        DATE_TRUNC('month', timestamp)::DATE AS month,
+        EXTRACT(MONTH FROM timestamp)::INTEGER AS mo,
+        COUNT(DISTINCT spell_id) AS admissions
+    FROM fact_admission
+    GROUP BY month, mo
+)
+SELECT
+    CASE WHEN a.mo IN (11, 12, 1, 2, 3) THEN 'winter' ELSE 'summer' END AS season,
+    SUM(a.admissions) AS total_admissions,
+    COALESCE(SUM(i.incidents), 0) AS total_incidents,
+    ROUND(1000.0 * COALESCE(SUM(i.incidents), 0) / SUM(a.admissions), 1) AS incidents_per_1000
+FROM admission_months a
+LEFT JOIN incident_months i
+    ON a.month = i.month
+GROUP BY season
+ORDER BY season;
+```
+
+</details>
+
+<details>
+<summary>Discussion</summary>
+
+Small numbers make incident analysis tricky -- with only ~100 incidents across three years, monthly rates will be noisy. Focus on the overall pattern rather than individual months.
+
+Check whether the incident rate (per 1,000 admissions) is higher during winter months or during known pressure periods. If it is, that's evidence for the hypothesis that operational pressure compromises safety. If it isn't, the trust's safety processes may be resilient to volume fluctuations -- which is actually good news.
+
+The ward breakdown is also valuable. If one ward has a disproportionate share of incidents, that could reflect a staffing issue, a patient acuity issue, or a reporting culture difference (wards that report more incidents might actually be safer because they're catching problems).
+
+In real NHS practice, this analysis feeds into the trust's Patient Safety Incident Response Framework (PSIRF). Safety teams look for systemic patterns, not just individual events.
+
+</details>
+
+---
+
+### Exercise 19: "Why can't we free up beds?"
+
+The bed management team is frustrated. Patients are medically fit for discharge but stuck in beds waiting. How big is the delayed transfer of care (DTOC) problem, and who is affected?
+
+<details>
+<summary>Hints</summary>
+
+- `fact_dtoc_assessment` records when a patient is assessed as medically fit for discharge. What does the timestamp mean?
+- `fact_discharge` records when they actually leave. Same `spell_id` links them.
+- The gap between medically fit and discharge is the DTOC delay.
+- Not every DTOC patient will have a matching discharge -- some may still be waiting.
+- Which wards have the worst delays? Does deprivation play a role?
+
+</details>
+
+<details>
+<summary>Solution</summary>
+
+**Overall DTOC delay:**
+
+```sql
+WITH dtoc_delays AS (
+    SELECT
+        dtoc.spell_id,
+        dtoc.patient_id,
+        dtoc.ward_id,
+        MIN(dtoc.timestamp) AS medically_fit_ts,
+        MIN(discharge.timestamp) AS discharge_ts,
+        EXTRACT(EPOCH FROM (MIN(discharge.timestamp) - MIN(dtoc.timestamp))) / 86400.0 AS delay_days
+    FROM fact_dtoc_assessment dtoc
+    JOIN fact_discharge discharge
+        ON dtoc.spell_id = discharge.spell_id
+    GROUP BY dtoc.spell_id, dtoc.patient_id, dtoc.ward_id
+)
+SELECT
+    COUNT(*) AS dtoc_spells,
+    ROUND(AVG(delay_days), 1) AS avg_delay_days,
+    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY delay_days), 1) AS median_delay_days,
+    ROUND(MAX(delay_days), 1) AS max_delay_days,
+    SUM(CASE WHEN delay_days > 7 THEN 1 ELSE 0 END) AS delayed_over_1wk
+FROM dtoc_delays;
+```
+
+**DTOC delay by ward:**
+
+```sql
+WITH dtoc_delays AS (
+    SELECT
+        dtoc.spell_id,
+        dtoc.patient_id,
+        dtoc.ward_id,
+        MIN(dtoc.timestamp) AS medically_fit_ts,
+        MIN(discharge.timestamp) AS discharge_ts,
+        EXTRACT(EPOCH FROM (MIN(discharge.timestamp) - MIN(dtoc.timestamp))) / 86400.0 AS delay_days
+    FROM fact_dtoc_assessment dtoc
+    JOIN fact_discharge discharge
+        ON dtoc.spell_id = discharge.spell_id
+    GROUP BY dtoc.spell_id, dtoc.patient_id, dtoc.ward_id
+)
+SELECT
+    ward.ward_name,
+    ward.department,
+    COUNT(*) AS dtoc_spells,
+    ROUND(AVG(delay_days), 1) AS avg_delay_days
+FROM dtoc_delays delay
+JOIN dim_ward ward
+    ON delay.ward_id = ward.id
+GROUP BY ward.ward_name, ward.department
+ORDER BY avg_delay_days DESC;
+```
+
+**DTOC delay by deprivation:**
+
+```sql
+WITH dtoc_delays AS (
+    SELECT
+        dtoc.spell_id,
+        dtoc.patient_id,
+        MIN(dtoc.timestamp) AS medically_fit_ts,
+        MIN(discharge.timestamp) AS discharge_ts,
+        EXTRACT(EPOCH FROM (MIN(discharge.timestamp) - MIN(dtoc.timestamp))) / 86400.0 AS delay_days
+    FROM fact_dtoc_assessment dtoc
+    JOIN fact_discharge discharge
+        ON dtoc.spell_id = discharge.spell_id
+    GROUP BY dtoc.spell_id, dtoc.patient_id
+)
+SELECT
+    patient.imd_decile,
+    COUNT(*) AS dtoc_spells,
+    ROUND(AVG(delay_days), 1) AS avg_delay_days
+FROM dtoc_delays delay
+JOIN dim_patient patient
+    ON delay.patient_id = patient.id AND patient.valid_to IS NULL
+GROUP BY patient.imd_decile
+ORDER BY patient.imd_decile;
+```
+
+</details>
+
+<details>
+<summary>Discussion</summary>
+
+DTOC (Delayed Transfer of Care) is one of the biggest operational challenges in the NHS. Patients who are medically fit but can't leave occupy beds that incoming patients need. Common reasons include waiting for social care packages, care home placements, community support, or family arrangements.
+
+Check the average and maximum delays. You may find the delays here are relatively mild -- average delays of 1-2 days and no cases exceeding a week. In real NHS trusts, DTOC delays can be far more severe: patients waiting weeks or even months for social care packages or care home placements, particularly in areas with limited community capacity. The technique matters regardless of the magnitude -- the query pattern for measuring the gap between "medically fit" and "actually discharged" is exactly what bed management teams use daily.
+
+The deprivation breakdown is especially important. Do patients from more deprived areas wait longer for discharge? Social care and housing options are harder to arrange in deprived areas, which can extend the wait. This is a health inequalities issue that connects directly to Exercise 22.
+
+Also check how many DTOC patients never get a discharge record -- they may still be in the hospital at the end of the reporting period.
+
+</details>
+
+---
+
+### Exercise 20: "How many beds are we actually using?"
+
+The capacity planning team needs to understand bed utilisation. Are some wards consistently full while others have spare capacity?
+
+<details>
+<summary>Hints</summary>
+
+- `fact_ward_assignment` records when a patient is placed in a ward bed, linked to `spell_id`.
+- `dim_ward` has `total_beds` per ward.
+- To estimate occupancy, you need to know how many patients were in each ward on a given day.
+- Compare occupied beds to total beds for a utilisation rate.
+- NHS target bed occupancy is 85% -- above that, flow problems and infection risk increase.
+
+</details>
+
+<details>
+<summary>Solution</summary>
+
+**Ward assignments by ward:**
+
+```sql
+SELECT
+    ward.ward_name,
+    ward.ward_type,
+    ward.total_beds,
+    COUNT(*) AS total_assignments
+FROM fact_ward_assignment assignment
+JOIN dim_ward ward
+    ON assignment.ward_id = ward.id
+GROUP BY ward.ward_name, ward.ward_type, ward.total_beds
+ORDER BY total_assignments DESC;
+```
+
+**Monthly ward activity as a proxy for utilisation:**
+
+```sql
+SELECT
+    DATE_TRUNC('month', assignment.timestamp)::DATE AS month,
+    ward.ward_name,
+    ward.total_beds,
+    COUNT(*) AS assignments,
+    ROUND(COUNT(*) * 1.0 / ward.total_beds, 1) AS assignments_per_bed
+FROM fact_ward_assignment assignment
+JOIN dim_ward ward
+    ON assignment.ward_id = ward.id
+GROUP BY month, ward.ward_name, ward.total_beds
+ORDER BY month, ward.ward_name;
+```
+
+</details>
+
+<details>
+<summary>Discussion</summary>
+
+Important: the queries above count ward assignments, not simultaneous occupancy. The `assignments_per_bed` figure is a throughput measure -- how many patients passed through each bed over a month -- not an occupancy rate. A ward showing 5 assignments per bed in a month doesn't mean 500% occupancy; it means each bed served 5 patients sequentially.
+
+True occupancy requires knowing how many patients are in each ward at any point in time -- which needs both ward assignment and discharge timestamps to calculate bed-days. For a more precise occupancy calculation, you would need to generate a daily census: for each day, count patients who were assigned to a ward but not yet discharged. That's a significantly harder query, but it's exactly what bed management systems compute in real time.
+
+NHS guidance suggests bed occupancy above 85% leads to increased infection risk, cancelled elective procedures, and ambulance handover delays. Check whether any wards are consistently running hot using the throughput proxy, then consider building the daily census query for a true occupancy picture.
+
+</details>
+
+---
+
+### Exercise 21: "Which patients cost the most?"
 
 Finance wants to understand the highest-cost patient episodes. Consider procedure tariffs and bed-day costs.
 
@@ -1004,7 +1586,7 @@ Try combining both procedure costs and bed-day costs for the same patient to get
 
 ---
 
-### Exercise 16: "Do deprived patients have worse outcomes?"
+### Exercise 22: "Do deprived patients have worse outcomes?"
 
 The Health Inequalities lead wants to know: is there a relationship between deprivation (IMD decile) and clinical outcomes like length of stay or readmission?
 
@@ -1014,7 +1596,7 @@ The Health Inequalities lead wants to know: is there a relationship between depr
 - Join your ALOS query to `dim_patient` and group by `imd_decile`.
 - Do the same for readmission rate.
 - IMD decile 1 = most deprived, 10 = least deprived.
-- Remember the outpatient funnel from Exercise 7 -- does deprivation affect referral-to-attendance rates?
+- Remember the outpatient funnel from Exercise 8 -- does deprivation affect referral-to-attendance rates?
 
 </details>
 
@@ -1095,16 +1677,16 @@ Health inequality analysis is a growing priority in NHS analytics. The tools you
 
 ## The Capstone
 
-### Exercise 17: "The Medical Director says this winter was the worst yet. Was it?"
+### Exercise 23: "The Medical Director says this winter was the worst yet. Was it?"
 
-The dataset spans multiple years. The Medical Director claims this most recent winter was the worst. Build a multi-metric seasonal analysis that compares winters across years.
+The data spans multiple years. The Medical Director claims this most recent winter was the worst. Build a multi-metric seasonal analysis that compares winters across years.
 
 <details>
 <summary>Hints</summary>
 
 - Monthly aggregation is your friend. Break key metrics down by month.
 - What does "winter pressure" actually mean in NHS terms? More ED arrivals, more admissions, longer stays, more discharges, more ICU escalations?
-- The patient population grows over the dataset's time span. How do you separate genuine seasonality from population growth?
+- The patient population grows over the reporting period. How do you separate genuine seasonality from population growth?
 - Compare the same winter months across different years. Label months with both month and year.
 - Look for any sudden spikes that might indicate an outbreak or surge event.
 
@@ -1195,9 +1777,11 @@ ORDER BY yr, season;
 <details>
 <summary>Discussion</summary>
 
-The monthly dashboard shows the overall shape of activity across the full dataset. But to answer "was this winter the worst?", you need to compare winters across years. The winter-vs-summer query labels each month by season and year, letting you compare directly.
+The monthly dashboard shows the overall shape of activity across the full reporting period. But to answer "was this winter the worst?", you need to compare winters across years. The winter-vs-summer query labels each month by season and year, letting you compare directly.
 
-However, the patient population grows over the dataset's time span, so later years naturally have more activity. A raw volume increase doesn't necessarily mean "worse" pressure. To separate genuine seasonality from population growth, compute per-capita rates (events per 1,000 active patients) by month. If the per-capita winter rate is climbing year over year, the Medical Director has a point.
+However, the patient population grows over the reporting period, so later years naturally have more activity. A raw volume increase doesn't necessarily mean "worse" pressure. To separate genuine seasonality from population growth, compute per-capita rates (events per 1,000 active patients) by month. If the per-capita winter rate is climbing year over year, the Medical Director has a point.
+
+One subtlety: the winter-vs-summer query groups by calendar year, which means January-March 2024 and November-December 2024 are grouped together even though they belong to two different winters. A more accurate approach would define a "winter season" spanning November to March and assign it to the year the winter starts (e.g., Nov 2023 - Mar 2024 = winter 2023). Try modifying the query to use a `CASE` expression that assigns a `winter_year` based on `CASE WHEN mo >= 11 THEN yr ELSE yr - 1 END`.
 
 The daily spike analysis reveals interesting outliers -- check whether the busiest days cluster around bank holidays or winter surges. This is the kind of multi-metric analysis that NHS boards actually review. Put it in a chart and it tells a compelling story.
 
@@ -1207,7 +1791,7 @@ The daily spike analysis reveals interesting outliers -- check whether the busie
 
 ## Data Detective
 
-### Exercise 18: "The Finance Director wants to know our surgical income."
+### Exercise 24: "The Finance Director wants to know our surgical income."
 
 Calculate total surgical tariff income from theatre utilisation and procedure tariffs.
 
@@ -1273,7 +1857,7 @@ ORDER BY total_income DESC;
 <details>
 <summary>Discussion</summary>
 
-Is utilisation roughly even across theatres? The per-day figure gives you a sense of how busy each theatre is across the dataset's time span.
+Is utilisation roughly even across theatres? The per-day figure gives you a sense of how busy each theatre is across the reporting period.
 
 Linking surgeries to their procedures requires going through the `surgical_episode_id` -- the surgery fact and the pre-op assessment fact share the same surgical episode. The join gives you the procedure details (name, complexity, tariff) for each completed surgery.
 
@@ -1283,7 +1867,7 @@ Income concentrates in complex and major procedures. Check which specialty group
 
 ---
 
-### Exercise 19: "Are we keeping patients, or just cycling through them?"
+### Exercise 25: "Are we keeping patients, or just cycling through them?"
 
 The strategy team wants to understand service utilisation patterns. Do patients come back for multiple episodes of care, or is it mostly one-and-done?
 
@@ -1320,8 +1904,8 @@ ORDER BY spells_per_patient;
 **Most complex patients (multi-pathway):**
 
 ```sql
-WITH patient_journeys AS (
-    SELECT patient_id, 'ed' AS pathway, attendance_id AS journey_id FROM fact_ed_arrival
+WITH patient_episodes AS (
+    SELECT patient_id, 'ed' AS pathway, attendance_id AS episode_id FROM fact_ed_arrival
     UNION ALL
     SELECT patient_id, 'inpatient', spell_id FROM fact_admission
     UNION ALL
@@ -1333,11 +1917,11 @@ WITH patient_journeys AS (
 )
 SELECT
     patient_id,
-    COUNT(DISTINCT journey_id) AS total_journeys,
+    COUNT(DISTINCT episode_id) AS total_episodes,
     COUNT(DISTINCT pathway) AS pathway_types
-FROM patient_journeys
+FROM patient_episodes
 GROUP BY patient_id
-ORDER BY total_journeys DESC, patient_id
+ORDER BY total_episodes DESC, patient_id
 LIMIT 15;
 ```
 
@@ -1381,14 +1965,14 @@ This is cohort analysis applied to healthcare. The same principle (who returns, 
 
 ## Multi-Year Analysis
 
-### Exercise 20: "Are we getting better or worse?"
+### Exercise 26: "Are we getting better or worse?"
 
 The board wants a performance dashboard showing quarterly trends for key NHS targets. Pick three targets we've already computed (A&E 4-hour, Cancer 28-day FDS, Diagnostic 6-week) and show how they trend over time.
 
 <details>
 <summary>Hints</summary>
 
-- Reuse patterns from Exercises 5, 11, and 12 -- but add `DATE_TRUNC('quarter', ...)` to group by quarter.
+- Reuse patterns from Exercises 6, 13, and 14 -- but add `DATE_TRUNC('quarter', ...)` to group by quarter.
 - Show both the percentage and the volume alongside each other. A target met on 10 patients is different from a target met on 1,000.
 - Think about how to present this. Three separate queries is fine.
 
@@ -1471,7 +2055,7 @@ Present these as line charts with horizontal target lines (78% for A&E, 75% for 
 
 ---
 
-### Exercise 21: "Do our patients come back?"
+### Exercise 27: "Do our patients come back?"
 
 Cohort analysis: of patients first seen in 2023, how many had activity in 2024? In 2025? This is about long-term continuity of care, not 30-day readmissions.
 
@@ -1481,7 +2065,7 @@ Cohort analysis: of patients first seen in 2023, how many had activity in 2024? 
 - Define "first appeared" using `MIN(timestamp)` across the major fact tables.
 - Build a 2023 cohort -- patients whose earliest activity falls in 2023.
 - Then check which years those same patients appear in across all fact tables.
-- This is different from Exercise 19 (which looked at episode counts per patient). Here you're looking at year-over-year re-attendance.
+- This is different from Exercise 25 (which looked at episode counts per patient). Here you're looking at year-over-year re-attendance.
 
 </details>
 
@@ -1533,7 +2117,7 @@ ORDER BY activity_year;
 
 High re-attendance (many 2023 patients still appearing in 2024 and 2025) suggests chronic conditions needing ongoing management -- these patients aren't "cured and gone." Low re-attendance suggests acute, one-time encounters.
 
-Try segmenting by primary condition or pathway type. Cardiac and respiratory patients likely have higher re-attendance than orthopaedic patients who come in for a single procedure. This connects back to Exercise 19 (service utilisation) but adds the time dimension -- are we seeing the same patients year after year, or is the population turning over?
+Try segmenting by primary condition or pathway type. Cardiac and respiratory patients likely have higher re-attendance than orthopaedic patients who come in for a single procedure. This connects back to Exercise 25 (service utilisation) but adds the time dimension -- are we seeing the same patients year after year, or is the population turning over?
 
 </details>
 

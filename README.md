@@ -1,6 +1,6 @@
 # SQL Practice: NHS Hospital Analytics
 
-21 SQL exercises using a simulated NHS acute trust dataset. Exercises are framed as real operational questions, progressing in difficulty from beginner to intermediate.
+27 SQL exercises using an NHS acute trust dataset. Exercises are framed as real operational questions, progressing in difficulty from beginner to intermediate.
 
 ## Why?
 
