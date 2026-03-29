@@ -362,7 +362,7 @@ ORDER BY imd_decile;
 <details>
 <summary>Discussion</summary>
 
-This gives you the clinical mix of the trust's population. You should see roughly 55% elective, 35% emergency, and 10% cancer pathway patients. Cardiac is the most common primary condition, followed by respiratory and orthopaedic.
+This gives you the clinical mix of the trust's population. You should see roughly 55% elective, 35% emergency, and 10% cancer pathway patients. Cardiac is the most common primary condition, followed by respiratory, GI, and orthopaedic.
 
 IMD (Index of Multiple Deprivation) deciles range from 1 (most deprived) to 10 (least deprived). The distribution here skews toward more deprived deciles, with roughly 5x more patients in decile 1 than decile 10. This kind of skew is common in urban acute trusts serving deprived catchment areas -- a London teaching hospital would look very different from a rural district general.
 
@@ -675,7 +675,7 @@ ORDER BY total_admissions DESC;
 <details>
 <summary>Discussion</summary>
 
-Respiratory consultants handle the most admissions, followed by general and cardiac. Try joining admissions to patient condition and consultant specialty to see how conditions align with specialty groups.
+Respiratory consultants handle the most admissions, followed by cardiac and general. Try joining admissions to patient condition and consultant specialty to see how conditions align with specialty groups.
 
 In this trust's data, specialist conditions are always routed to the matching specialty group -- cardiac patients are seen by cardiac consultants, respiratory by respiratory, and so on. This perfect alignment is worth noting: real hospitals sometimes have crossover (a general medicine consultant covering respiratory patients during a staffing gap, for example). Try verifying the pattern by joining admissions to patient condition and consultant specialty.
 
@@ -1665,7 +1665,7 @@ ORDER BY patient.imd_decile;
 <details>
 <summary>Discussion</summary>
 
-ALOS shows a clear deprivation gradient -- patients from the most deprived areas (deciles 1-3) stay nearly twice as long as those from the least deprived (deciles 8-10). This is a significant finding and the kind of signal an inequalities dashboard should surface. In real NHS data, this pattern is well-documented and driven by comorbidities, social care delays, and housing issues affecting discharge.
+ALOS shows a clear deprivation gradient -- patients from the most deprived areas (deciles 1-3) stay noticeably longer than those from the least deprived (deciles 8-10). This is a significant finding and the kind of signal an inequalities dashboard should surface. In real NHS data, this pattern is well-documented and driven by comorbidities, social care delays, and housing issues affecting discharge.
 
 The referral-to-attendance ratio is also worth exploring by deprivation. In real NHS data, deprived populations typically have higher DNA rates, though the pattern here may be less pronounced.
 
@@ -1972,7 +1972,7 @@ The board wants a performance dashboard showing quarterly trends for key NHS tar
 <details>
 <summary>Hints</summary>
 
-- Reuse patterns from Exercises 6, 13, and 14 -- but add `DATE_TRUNC('quarter', ...)` to group by quarter.
+- Reuse patterns from Exercises 6, 12, and 13 -- but add `DATE_TRUNC('quarter', ...)` to group by quarter.
 - Show both the percentage and the volume alongside each other. A target met on 10 patients is different from a target met on 1,000.
 - Think about how to present this. Three separate queries is fine.
 

@@ -11,7 +11,7 @@ FROM dim_patient;
 
 | patient_count |
 |---------------|
-| 16659         |
+| 16341         |
 
 
 ### Only current patients
@@ -24,7 +24,7 @@ WHERE valid_to IS NULL;
 
 | current_patients |
 |------------------|
-| 16659            |
+| 16341            |
 
 
 ---
@@ -177,15 +177,15 @@ LIMIT 10;
 | day        | day_of_week | arrivals |
 |------------|-------------|----------|
 | 2023-01-01 | Sunday      | 41       |
-| 2025-12-23 | Tuesday     | 26       |
-| 2025-12-09 | Tuesday     | 25       |
-| 2025-06-25 | Wednesday   | 25       |
-| 2025-03-10 | Monday      | 25       |
+| 2025-12-12 | Friday      | 25       |
 | 2024-12-30 | Monday      | 25       |
-| 2025-05-15 | Thursday    | 24       |
-| 2024-03-29 | Friday      | 23       |
-| 2025-12-29 | Monday      | 23       |
-| 2025-11-24 | Monday      | 23       |
+| 2025-08-26 | Tuesday     | 24       |
+| 2025-09-10 | Wednesday   | 23       |
+| 2025-11-20 | Thursday    | 22       |
+| 2025-09-30 | Tuesday     | 22       |
+| 2025-10-07 | Tuesday     | 22       |
+| 2025-07-21 | Monday      | 22       |
+| 2025-12-16 | Tuesday     | 22       |
 
 
 ### Average arrivals by day of week
@@ -203,13 +203,13 @@ ORDER BY day_num;
 
 | day_of_week | day_num | total_arrivals | avg_per_day |
 |-------------|---------|----------------|-------------|
-| Monday      | 1       | 1867           | 11.9        |
-| Tuesday     | 2       | 1592           | 10.1        |
-| Wednesday   | 3       | 1544           | 9.8         |
-| Thursday    | 4       | 1668           | 10.7        |
-| Friday      | 5       | 1616           | 10.4        |
-| Saturday    | 6       | 1273           | 8.2         |
-| Sunday      | 7       | 1140           | 7.3         |
+| Monday      | 1       | 1886           | 12          |
+| Tuesday     | 2       | 1609           | 10.2        |
+| Wednesday   | 3       | 1620           | 10.3        |
+| Thursday    | 4       | 1530           | 9.8         |
+| Friday      | 5       | 1573           | 10.1        |
+| Saturday    | 6       | 1294           | 8.3         |
+| Sunday      | 7       | 1198           | 7.8         |
 
 
 ---
@@ -232,13 +232,13 @@ ORDER BY day_num;
 
 | day_of_week | day_num | total_arrivals | num_days | avg_arrivals_per_day |
 |-------------|---------|----------------|----------|----------------------|
-| Monday      | 1       | 1867           | 157      | 11.9                 |
-| Tuesday     | 2       | 1592           | 157      | 10.1                 |
-| Wednesday   | 3       | 1544           | 157      | 9.8                  |
-| Thursday    | 4       | 1668           | 156      | 10.7                 |
-| Friday      | 5       | 1616           | 156      | 10.4                 |
-| Saturday    | 6       | 1273           | 155      | 8.2                  |
-| Sunday      | 7       | 1140           | 156      | 7.3                  |
+| Monday      | 1       | 1886           | 157      | 12                   |
+| Tuesday     | 2       | 1609           | 157      | 10.2                 |
+| Wednesday   | 3       | 1620           | 157      | 10.3                 |
+| Thursday    | 4       | 1530           | 156      | 9.8                  |
+| Friday      | 5       | 1573           | 156      | 10.1                 |
+| Saturday    | 6       | 1294           | 156      | 8.3                  |
+| Sunday      | 7       | 1198           | 154      | 7.8                  |
 
 
 ### Monday effect by year
@@ -256,27 +256,27 @@ ORDER BY yr, day_num;
 
 | yr   | day_of_week | day_num | avg_arrivals |
 |------|-------------|---------|--------------|
-| 2023 | Monday      | 1       | 8.1          |
-| 2023 | Tuesday     | 2       | 7            |
-| 2023 | Wednesday   | 3       | 6.7          |
-| 2023 | Thursday    | 4       | 7            |
-| 2023 | Friday      | 5       | 7.2          |
+| 2023 | Monday      | 1       | 8.5          |
+| 2023 | Tuesday     | 2       | 7.1          |
+| 2023 | Wednesday   | 3       | 7.1          |
+| 2023 | Thursday    | 4       | 6.5          |
+| 2023 | Friday      | 5       | 7            |
 | 2023 | Saturday    | 6       | 5.2          |
-| 2023 | Sunday      | 7       | 4.8          |
+| 2023 | Sunday      | 7       | 4.6          |
 | 2024 | Monday      | 1       | 12.4         |
-| 2024 | Tuesday     | 2       | 9.9          |
-| 2024 | Wednesday   | 3       | 9.7          |
-| 2024 | Thursday    | 4       | 10.7         |
-| 2024 | Friday      | 5       | 10.4         |
-| 2024 | Saturday    | 6       | 7.1          |
-| 2024 | Sunday      | 7       | 6.8          |
-| 2025 | Monday      | 1       | 15.2         |
+| 2024 | Tuesday     | 2       | 10.2         |
+| 2024 | Wednesday   | 3       | 10.3         |
+| 2024 | Thursday    | 4       | 10           |
+| 2024 | Friday      | 5       | 9.8          |
+| 2024 | Saturday    | 6       | 8.3          |
+| 2024 | Sunday      | 7       | 7.5          |
+| 2025 | Monday      | 1       | 15.1         |
 | 2025 | Tuesday     | 2       | 13.5         |
-| 2025 | Wednesday   | 3       | 13           |
-| 2025 | Thursday    | 4       | 14.3         |
-| 2025 | Friday      | 5       | 13.5         |
-| 2025 | Saturday    | 6       | 12.3         |
-| 2025 | Sunday      | 7       | 10.4         |
+| 2025 | Wednesday   | 3       | 13.5         |
+| 2025 | Thursday    | 4       | 12.9         |
+| 2025 | Friday      | 5       | 13.4         |
+| 2025 | Saturday    | 6       | 11.5         |
+| 2025 | Sunday      | 7       | 11.1         |
 
 
 ---
@@ -297,9 +297,9 @@ ORDER BY patients DESC;
 
 | pathway_type | patients |
 |--------------|----------|
-| elective     | 9194     |
-| emergency    | 5783     |
-| cancer       | 1682     |
+| elective     | 8917     |
+| emergency    | 5850     |
+| cancer       | 1574     |
 
 
 ### Primary condition breakdown
@@ -316,13 +316,13 @@ ORDER BY patients DESC;
 
 | primary_condition | patients |
 |-------------------|----------|
-| cardiac           | 3580     |
-| respiratory       | 3083     |
-| ortho             | 2515     |
-| GI                | 2473     |
-| neuro             | 1976     |
-| infectious        | 1619     |
-| obstetric         | 1413     |
+| cardiac           | 3598     |
+| respiratory       | 2995     |
+| GI                | 2514     |
+| ortho             | 2413     |
+| neuro             | 1898     |
+| infectious        | 1595     |
+| obstetric         | 1328     |
 
 
 ### IMD decile distribution
@@ -339,16 +339,16 @@ ORDER BY imd_decile;
 
 | imd_decile | patients |
 |------------|----------|
-| 1          | 1976     |
-| 2          | 1643     |
-| 3          | 2204     |
-| 4          | 2566     |
-| 5          | 2567     |
-| 6          | 2192     |
-| 7          | 1550     |
-| 8          | 1025     |
-| 9          | 558      |
-| 10         | 378      |
+| 1          | 1900     |
+| 2          | 1605     |
+| 3          | 2157     |
+| 4          | 2548     |
+| 5          | 2540     |
+| 6          | 2158     |
+| 7          | 1568     |
+| 8          | 903      |
+| 9          | 579      |
+| 10         | 383      |
 
 
 ---
@@ -372,7 +372,7 @@ JOIN fact_ed_assessment assessment
 
 | assessed_patients | avg_minutes | within_4h | pct_within_4h |
 |-------------------|-------------|-----------|---------------|
-| 10174             | 144         | 8554      | 84.1          |
+| 10151             | 142         | 8572      | 84.4          |
 
 
 ---
@@ -403,7 +403,7 @@ FROM spells;
 
 | completed_spells | mean_los_days | median_los_days |
 |------------------|---------------|-----------------|
-| 5403             | 5.9           | 5.7             |
+| 9275             | 5.3           | 4.6             |
 
 
 ### ALOS by primary condition
@@ -433,13 +433,13 @@ ORDER BY mean_los DESC, primary_condition;
 
 | primary_condition | spells | mean_los |
 |-------------------|--------|----------|
-| neuro             | 711    | 6        |
-| obstetric         | 428    | 6        |
-| GI                | 820    | 5.9      |
-| cardiac           | 1124   | 5.9      |
-| infectious        | 551    | 5.9      |
-| respiratory       | 982    | 5.9      |
-| ortho             | 787    | 5.7      |
+| neuro             | 1115   | 6.2      |
+| cardiac           | 2022   | 5.6      |
+| respiratory       | 1705   | 5.6      |
+| obstetric         | 713    | 5.2      |
+| GI                | 1328   | 5.1      |
+| infectious        | 901    | 4.9      |
+| ortho             | 1491   | 4.1      |
 
 
 ---
@@ -463,8 +463,8 @@ ORDER BY pathways DESC;
 
 | stage     | pathways |
 |-----------|----------|
-| referrals | 9611     |
-| attended  | 3776     |
+| referrals | 18577    |
+| attended  | 13378    |
 
 
 ### Referral volume by month
@@ -480,42 +480,42 @@ ORDER BY month;
 
 | month      | referrals |
 |------------|-----------|
-| 2023-01-01 | 239       |
-| 2023-02-01 | 176       |
-| 2023-03-01 | 199       |
-| 2023-04-01 | 137       |
-| 2023-05-01 | 155       |
-| 2023-06-01 | 150       |
-| 2023-07-01 | 137       |
-| 2023-08-01 | 191       |
-| 2023-09-01 | 181       |
-| 2023-10-01 | 190       |
-| 2023-11-01 | 238       |
-| 2023-12-01 | 217       |
-| 2024-01-01 | 296       |
-| 2024-02-01 | 245       |
-| 2024-03-01 | 256       |
-| 2024-04-01 | 251       |
-| 2024-05-01 | 226       |
-| 2024-06-01 | 216       |
-| 2024-07-01 | 271       |
-| 2024-08-01 | 286       |
-| 2024-09-01 | 251       |
-| 2024-10-01 | 293       |
-| 2024-11-01 | 257       |
-| 2024-12-01 | 354       |
-| 2025-01-01 | 385       |
-| 2025-02-01 | 347       |
-| 2025-03-01 | 307       |
-| 2025-04-01 | 320       |
-| 2025-05-01 | 313       |
-| 2025-06-01 | 340       |
-| 2025-07-01 | 371       |
-| 2025-08-01 | 327       |
-| 2025-09-01 | 344       |
-| 2025-10-01 | 388       |
-| 2025-11-01 | 347       |
-| 2025-12-01 | 410       |
+| 2023-01-01 | 335       |
+| 2023-02-01 | 302       |
+| 2023-03-01 | 312       |
+| 2023-04-01 | 251       |
+| 2023-05-01 | 340       |
+| 2023-06-01 | 296       |
+| 2023-07-01 | 335       |
+| 2023-08-01 | 374       |
+| 2023-09-01 | 342       |
+| 2023-10-01 | 389       |
+| 2023-11-01 | 376       |
+| 2023-12-01 | 403       |
+| 2024-01-01 | 521       |
+| 2024-02-01 | 459       |
+| 2024-03-01 | 465       |
+| 2024-04-01 | 511       |
+| 2024-05-01 | 495       |
+| 2024-06-01 | 468       |
+| 2024-07-01 | 545       |
+| 2024-08-01 | 509       |
+| 2024-09-01 | 511       |
+| 2024-10-01 | 553       |
+| 2024-11-01 | 499       |
+| 2024-12-01 | 665       |
+| 2025-01-01 | 733       |
+| 2025-02-01 | 625       |
+| 2025-03-01 | 644       |
+| 2025-04-01 | 676       |
+| 2025-05-01 | 634       |
+| 2025-06-01 | 612       |
+| 2025-07-01 | 696       |
+| 2025-08-01 | 648       |
+| 2025-09-01 | 753       |
+| 2025-10-01 | 735       |
+| 2025-11-01 | 691       |
+| 2025-12-01 | 874       |
 
 
 ---
@@ -536,11 +536,11 @@ ORDER BY recommendation_score;
 
 | recommendation_score | responses | pct  |
 |----------------------|-----------|------|
-| 1                    | 4         | 0.1  |
-| 2                    | 54        | 1.2  |
-| 3                    | 642       | 14   |
-| 4                    | 2017      | 43.9 |
-| 5                    | 1880      | 40.9 |
+| 1                    | 3         | 0    |
+| 2                    | 71        | 0.8  |
+| 3                    | 1030      | 12   |
+| 4                    | 3542      | 41.2 |
+| 5                    | 3948      | 45.9 |
 
 
 ### FFT recommend rate
@@ -556,7 +556,7 @@ FROM fact_fft_response;
 
 | total_responses | positive | recommend_pct |
 |-----------------|----------|---------------|
-| 4597            | 3897     | 84.8          |
+| 8594            | 7490     | 87.2          |
 
 
 ---
@@ -580,31 +580,20 @@ ORDER BY admissions DESC, consultant.id;
 
 | id      | specialty_group  | grade      | admissions |
 |---------|------------------|------------|------------|
-| CON_012 | musculoskeletal  | consultant | 556        |
-| CON_002 | cardiac          | consultant | 521        |
-| CON_005 | respiratory      | consultant | 471        |
-| CON_001 | cardiac          | consultant | 429        |
-| CON_003 | cardiac          | registrar  | 414        |
-| CON_007 | respiratory      | consultant | 390        |
-| CON_006 | respiratory      | consultant | 380        |
-| CON_021 | general          | consultant | 367        |
-| CON_020 | general          | consultant | 345        |
-| CON_013 | musculoskeletal  | consultant | 344        |
-| CON_004 | cardiac          | SHO        | 339        |
-| CON_009 | respiratory      | registrar  | 338        |
-| CON_017 | gastrointestinal | consultant | 305        |
-| CON_015 | gastrointestinal | consultant | 297        |
-| CON_011 | respiratory      | SHO        | 288        |
-| CON_024 | general          | registrar  | 283        |
-| CON_014 | musculoskeletal  | registrar  | 278        |
-| CON_010 | respiratory      | registrar  | 253        |
-| CON_023 | general          | registrar  | 252        |
-| CON_016 | gastrointestinal | consultant | 247        |
-| CON_025 | general          | SHO        | 247        |
-| CON_022 | general          | consultant | 243        |
-| CON_018 | gastrointestinal | registrar  | 234        |
-| CON_019 | gastrointestinal | SHO        | 166        |
-| CON_008 | respiratory      | consultant | 141        |
+| CON_002 | cardiac          | consultant | 1106       |
+| CON_001 | cardiac          | consultant | 1007       |
+| CON_012 | musculoskeletal  | consultant | 961        |
+| CON_005 | respiratory      | consultant | 883        |
+| CON_007 | respiratory      | consultant | 791        |
+| CON_006 | respiratory      | consultant | 775        |
+| CON_021 | general          | consultant | 688        |
+| CON_020 | general          | consultant | 627        |
+| CON_022 | general          | consultant | 589        |
+| CON_013 | musculoskeletal  | consultant | 564        |
+| CON_017 | gastrointestinal | consultant | 516        |
+| CON_015 | gastrointestinal | consultant | 427        |
+| CON_016 | gastrointestinal | consultant | 423        |
+| CON_008 | respiratory      | consultant | 255        |
 
 
 ### Workload by specialty group
@@ -623,11 +612,11 @@ ORDER BY total_admissions DESC;
 
 | specialty_group  | total_admissions | unique_patients |
 |------------------|------------------|-----------------|
-| respiratory      | 2261             | 1563            |
-| general          | 1737             | 1151            |
-| cardiac          | 1703             | 1178            |
-| gastrointestinal | 1249             | 824             |
-| musculoskeletal  | 1178             | 793             |
+| respiratory      | 2704             | 1654            |
+| cardiac          | 2113             | 1268            |
+| general          | 1904             | 1168            |
+| musculoskeletal  | 1525             | 894             |
+| gastrointestinal | 1366             | 848             |
 
 
 ---
@@ -675,16 +664,16 @@ LIMIT 10;
 
 | procedure_name           | complexity | tariff | specialty_group  | times_performed |
 |--------------------------|------------|--------|------------------|-----------------|
-| Aortic valve replacement | complex    | 14000  | cardiac          | 122             |
-| CABG                     | complex    | 12500  | cardiac          | 104             |
-| Lung resection           | complex    | 11000  | respiratory      | 158             |
-| Total hip replacement    | complex    | 10500  | musculoskeletal  | 70              |
-| Total knee replacement   | complex    | 10200  | musculoskeletal  | 94              |
-| Bowel resection          | complex    | 9800   | gastrointestinal | 84              |
-| Thoracotomy              | major      | 9500   | respiratory      | 140             |
-| Coronary angioplasty     | complex    | 8500   | cardiac          | 123             |
-| Hip hemiarthroplasty     | major      | 7800   | musculoskeletal  | 79              |
-| Spinal decompression     | major      | 7200   | musculoskeletal  | 76              |
+| Aortic valve replacement | complex    | 14000  | cardiac          | 266             |
+| CABG                     | complex    | 12500  | cardiac          | 281             |
+| Lung resection           | complex    | 11000  | respiratory      | 273             |
+| Total hip replacement    | complex    | 10500  | musculoskeletal  | 195             |
+| Total knee replacement   | complex    | 10200  | musculoskeletal  | 199             |
+| Bowel resection          | complex    | 9800   | gastrointestinal | 166             |
+| Thoracotomy              | major      | 9500   | respiratory      | 302             |
+| Coronary angioplasty     | complex    | 8500   | cardiac          | 287             |
+| Hip hemiarthroplasty     | major      | 7800   | musculoskeletal  | 208             |
+| Pacemaker insertion      | major      | 7200   | cardiac          | 270             |
 
 
 ---
@@ -716,7 +705,7 @@ FROM cancer_times;
 
 | pathways_seen | avg_days | within_28d | pct_fds |
 |---------------|----------|------------|---------|
-| 726           | 10       | 705        | 97.1    |
+| 2796          | 20       | 2142       | 76.6    |
 
 
 ---
@@ -748,7 +737,7 @@ FROM diag_times;
 
 | tests_completed | avg_days | within_6wk | pct_compliance |
 |-----------------|----------|------------|----------------|
-| 1371            | 11       | 1329       | 96.9           |
+| 6026            | 12       | 5730       | 95.1           |
 
 
 ### By test type
@@ -778,14 +767,14 @@ ORDER BY avg_days DESC;
 
 | test_type  | completed | avg_days |
 |------------|-----------|----------|
-| mri        | 51        | 40       |
-| ultrasound | 41        | 39       |
-| ct         | 37        | 36       |
-| endoscopy  | 121       | 16       |
-| other      | 346       | 16       |
-| xray       | 143       | 3        |
-| blood      | 489       | 3        |
-| pathology  | 143       | 3        |
+| mri        | 114       | 63       |
+| ct         | 218       | 40       |
+| ultrasound | 345       | 26       |
+| other      | 1386      | 19       |
+| endoscopy  | 492       | 18       |
+| pathology  | 697       | 4        |
+| xray       | 681       | 4        |
+| blood      | 2093      | 4        |
 
 
 ---
@@ -808,23 +797,23 @@ ORDER BY times_administered DESC
 LIMIT 15;
 ```
 
-| medication_name  | bnf_category                                  | route   | times_administered |
-|------------------|-----------------------------------------------|---------|--------------------|
-| Tiotropium       | 3.1.2 Antimuscarinic bronchodilators          | inhaled | 1122               |
-| Salbutamol       | 3.1.1.1 Selective beta2 agonists              | inhaled | 1100               |
-| Doxycycline      | 5.1.3 Tetracyclines                           | oral    | 1073               |
-| Ipratropium      | 3.1.2 Antimuscarinic bronchodilators          | inhaled | 1065               |
-| Amoxicillin      | 5.1.1.3 Broad-spectrum penicillins            | oral    | 1060               |
-| Prednisolone     | 6.3.2 Glucocorticoid therapy                  | oral    | 1039               |
-| Dexamethasone    | 6.3.2 Glucocorticoid therapy                  | iv      | 868                |
-| Insulin glargine | 6.1.1.2 Intermediate and long-acting insulins | sc      | 856                |
-| Morphine sulfate | 4.7.2 Opioid analgesics                       | iv      | 843                |
-| Phenytoin        | 4.8.1 Control of epilepsy                     | oral    | 839                |
-| Bisoprolol       | 2.4 Beta-adrenoceptor blocking drugs          | oral    | 837                |
-| Levetiracetam    | 4.8.1 Control of epilepsy                     | oral    | 818                |
-| Aspirin          | 2.9 Antiplatelet drugs                        | oral    | 816                |
-| Metformin        | 6.1.2.2 Biguanides                            | oral    | 805                |
-| Ramipril         | 2.5.5.1 ACE inhibitors                        | oral    | 799                |
+| medication_name  | bnf_category                         | route   | times_administered |
+|------------------|--------------------------------------|---------|--------------------|
+| Aspirin          | 2.9 Antiplatelet drugs               | oral    | 491                |
+| Amiodarone       | 2.3.2 Drugs for arrhythmias          | oral    | 478                |
+| Atorvastatin     | 2.12 Lipid-regulating drugs          | oral    | 469                |
+| Clopidogrel      | 2.9 Antiplatelet drugs               | oral    | 468                |
+| Bisoprolol       | 2.4 Beta-adrenoceptor blocking drugs | oral    | 465                |
+| Ramipril         | 2.5.5.1 ACE inhibitors               | oral    | 433                |
+| Prednisolone     | 6.3.2 Glucocorticoid therapy         | oral    | 338                |
+| Amoxicillin      | 5.1.1.3 Broad-spectrum penicillins   | oral    | 321                |
+| Ipratropium      | 3.1.2 Antimuscarinic bronchodilators | inhaled | 319                |
+| Doxycycline      | 5.1.3 Tetracyclines                  | oral    | 319                |
+| Phenytoin        | 4.8.1 Control of epilepsy            | oral    | 317                |
+| Dexamethasone    | 6.3.2 Glucocorticoid therapy         | iv      | 317                |
+| Sodium valproate | 4.8.1 Control of epilepsy            | oral    | 315                |
+| Tiotropium       | 3.1.2 Antimuscarinic bronchodilators | inhaled | 314                |
+| Salbutamol       | 3.1.1.1 Selective beta2 agonists     | inhaled | 300                |
 
 
 ### Prescribing by condition
@@ -845,42 +834,40 @@ GROUP BY patient.primary_condition, medication.bnf_category
 ORDER BY patient.primary_condition, administrations DESC;
 ```
 
-| primary_condition | bnf_category                                  | administrations |
-|-------------------|-----------------------------------------------|-----------------|
-| GI                | 4.6 Drugs used in nausea and vertigo          | 1083            |
-| GI                | 1.3.5 Proton pump inhibitors                  | 560             |
-| GI                | 5.1.12 Quinolones                             | 533             |
-| GI                | 1.6.4 Osmotic laxatives                       | 533             |
-| GI                | 1.5.1 Aminosalicylates                        | 527             |
-| cardiac           | 2.9 Antiplatelet drugs                        | 1471            |
-| cardiac           | 2.4 Beta-adrenoceptor blocking drugs          | 769             |
-| cardiac           | 2.5.5.1 ACE inhibitors                        | 714             |
-| cardiac           | 2.3.2 Drugs for arrhythmias                   | 705             |
-| cardiac           | 2.12 Lipid-regulating drugs                   | 702             |
-| infectious        | 3.1.2 Antimuscarinic bronchodilators          | 690             |
-| infectious        | 3.1.1.1 Selective beta2 agonists              | 352             |
-| infectious        | 5.1.1.3 Broad-spectrum penicillins            | 333             |
-| infectious        | 6.3.2 Glucocorticoid therapy                  | 310             |
-| infectious        | 5.1.3 Tetracyclines                           | 300             |
-| neuro             | 4.8.1 Control of epilepsy                     | 917             |
-| neuro             | 6.3.2 Glucocorticoid therapy                  | 487             |
-| neuro             | 6.1.2.2 Biguanides                            | 465             |
-| neuro             | 4.7.2 Opioid analgesics                       | 459             |
-| neuro             | 6.1.1.2 Intermediate and long-acting insulins | 452             |
-| obstetric         | 4.8.1 Control of epilepsy                     | 566             |
-| obstetric         | 6.1.1.2 Intermediate and long-acting insulins | 300             |
-| obstetric         | 4.7.2 Opioid analgesics                       | 295             |
-| obstetric         | 6.3.2 Glucocorticoid therapy                  | 288             |
-| obstetric         | 6.1.2.2 Biguanides                            | 255             |
-| ortho             | 10.1.1 Non-steroidal anti-inflammatory drugs  | 1530            |
-| ortho             | 4.7.2 Opioid analgesics                       | 506             |
-| ortho             | 2.8.1 Parenteral anticoagulants               | 498             |
-| ortho             | 4.7.1 Non-opioid analgesics                   | 496             |
-| respiratory       | 3.1.2 Antimuscarinic bronchodilators          | 1268            |
-| respiratory       | 5.1.3 Tetracyclines                           | 650             |
-| respiratory       | 3.1.1.1 Selective beta2 agonists              | 617             |
-| respiratory       | 6.3.2 Glucocorticoid therapy                  | 616             |
-| respiratory       | 5.1.1.3 Broad-spectrum penicillins            | 608             |
+| primary_condition | bnf_category                                 | administrations |
+|-------------------|----------------------------------------------|-----------------|
+| GI                | 4.6 Drugs used in nausea and vertigo         | 433             |
+| GI                | 1.6.4 Osmotic laxatives                      | 237             |
+| GI                | 5.1.12 Quinolones                            | 214             |
+| GI                | 1.5.1 Aminosalicylates                       | 210             |
+| GI                | 1.3.5 Proton pump inhibitors                 | 197             |
+| cardiac           | 2.9 Antiplatelet drugs                       | 959             |
+| cardiac           | 2.3.2 Drugs for arrhythmias                  | 478             |
+| cardiac           | 2.12 Lipid-regulating drugs                  | 469             |
+| cardiac           | 2.4 Beta-adrenoceptor blocking drugs         | 465             |
+| cardiac           | 2.5.5.1 ACE inhibitors                       | 433             |
+| infectious        | 5.1.4 Aminoglycosides                        | 177             |
+| infectious        | 5.1.2 Cephalosporins and carbapenems         | 169             |
+| infectious        | 5.1.1.2 Penicillinase-resistant penicillins  | 166             |
+| infectious        | 5.1.1.3 Broad-spectrum penicillins           | 158             |
+| infectious        | 5.1.7 Glycopeptide antibiotics               | 151             |
+| neuro             | 4.8.1 Control of epilepsy                    | 1221            |
+| neuro             | 4.7.3 Neuropathic pain                       | 291             |
+| neuro             | 4.8.2 Drugs used in status epilepticus       | 283             |
+| obstetric         | 2.6.2 Calcium-channel blockers               | 152             |
+| obstetric         | 4.8.2 Drugs used in status epilepticus       | 142             |
+| obstetric         | 5.1.1.3 Broad-spectrum penicillins           | 139             |
+| obstetric         | 7.1.1 Prostaglandins and oxytocics           | 139             |
+| obstetric         | 2.4 Beta-adrenoceptor blocking drugs         | 122             |
+| ortho             | 10.1.1 Non-steroidal anti-inflammatory drugs | 613             |
+| ortho             | 4.7.2 Opioid analgesics                      | 399             |
+| ortho             | 2.8.1 Parenteral anticoagulants              | 214             |
+| ortho             | 4.7.1 Non-opioid analgesics                  | 209             |
+| respiratory       | 6.3.2 Glucocorticoid therapy                 | 655             |
+| respiratory       | 3.1.2 Antimuscarinic bronchodilators         | 633             |
+| respiratory       | 5.1.1.3 Broad-spectrum penicillins           | 321             |
+| respiratory       | 5.1.3 Tetracyclines                          | 319             |
+| respiratory       | 3.1.1.1 Selective beta2 agonists             | 300             |
 
 
 ### Estimated medication cost by spell
@@ -903,21 +890,21 @@ LIMIT 15;
 
 | spell_id    | patient_id  | total_med_cost | administrations |
 |-------------|-------------|----------------|-----------------|
-| inst_39677  | PAT_0000310 | 24.3           | 6               |
-| inst_101244 | PAT_0001887 | 23.95          | 6               |
-| inst_100910 | PAT_0003912 | 23.35          | 7               |
-| inst_64792  | PAT_0010340 | 23.2           | 4               |
-| inst_95461  | PAT_0009100 | 23.2           | 4               |
-| inst_98668  | PAT_0015281 | 22.8           | 8               |
-| inst_32401  | PAT_0001182 | 22.75          | 7               |
-| inst_20607  | PAT_0002239 | 21.7           | 6               |
-| inst_72691  | PAT_0012707 | 20.95          | 5               |
-| inst_06076  | PAT_0001405 | 20.75          | 5               |
-| inst_55512  | PAT_0002405 | 20.6           | 4               |
-| inst_80962  | PAT_0013092 | 20.3           | 7               |
-| inst_71785  | PAT_0002586 | 20.3           | 7               |
-| inst_59028  | PAT_0001078 | 19.9           | 7               |
-| inst_54631  | PAT_0009445 | 19.9           | 4               |
+| inst_32061  | PAT_0002466 | 147            | 4               |
+| inst_51600  | PAT_0009327 | 141.8          | 6               |
+| inst_38775  | PAT_0001943 | 135            | 3               |
+| inst_109797 | PAT_0003911 | 130.5          | 4               |
+| inst_63430  | PAT_0010818 | 130.5          | 4               |
+| inst_92716  | PAT_0010925 | 128.5          | 3               |
+| inst_54865  | PAT_0004770 | 128.5          | 3               |
+| inst_31581  | PAT_0002084 | 125.3          | 6               |
+| inst_62647  | PAT_0009913 | 115.5          | 3               |
+| inst_53584  | PAT_0008130 | 112.6          | 8               |
+| inst_93749  | PAT_0014142 | 104.8          | 4               |
+| inst_28040  | PAT_0005807 | 102.8          | 3               |
+| inst_79157  | PAT_0003654 | 98.5           | 3               |
+| inst_100546 | PAT_0006123 | 96.3           | 3               |
+| inst_83253  | PAT_0011891 | 92.6           | 4               |
 
 
 ---
@@ -957,7 +944,7 @@ JOIN ip_spells inpatient
 
 | ed_admitted_spells | ed_alos | overall_alos |
 |--------------------|---------|--------------|
-| 1132               | 5.9     | 5.9          |
+| 1599               | 5.3     | 5.3          |
 
 
 ---
@@ -992,7 +979,7 @@ JOIN spells readmit
 
 | readmissions | total_completed_spells | readmission_pct |
 |--------------|------------------------|-----------------|
-| 342          | 5403                   | 6.3             |
+| 1347         | 9275                   | 14.5            |
 
 
 ### Readmission rate by comorbidity count
@@ -1033,15 +1020,15 @@ ORDER BY patient.comorbidity_count;
 
 | comorbidity_count | total_spells | readmissions | readmission_pct |
 |-------------------|--------------|--------------|-----------------|
-| 0                 | 847          | 45           | 5.3             |
-| 1                 | 1640         | 84           | 5.1             |
-| 2                 | 1469         | 76           | 5.2             |
-| 3                 | 842          | 74           | 8.8             |
-| 4                 | 390          | 44           | 11.3            |
-| 5                 | 157          | 13           | 8.3             |
-| 6                 | 45           | 5            | 11.1            |
-| 7                 | 9            | 0            | 0               |
-| 8                 | 4            | 1            | 25              |
+| 0                 | 1505         | 184          | 12.2            |
+| 1                 | 2703         | 315          | 11.7            |
+| 2                 | 2465         | 408          | 16.6            |
+| 3                 | 1469         | 236          | 16.1            |
+| 4                 | 717          | 122          | 17              |
+| 5                 | 297          | 61           | 20.5            |
+| 6                 | 95           | 18           | 18.9            |
+| 7                 | 19           | 2            | 10.5            |
+| 8                 | 5            | 1            | 20              |
 
 
 ---
@@ -1061,7 +1048,7 @@ FROM fact_admission;
 
 | deaths | total_spells | mortality_pct |
 |--------|--------------|---------------|
-| 119    | 8128         | 1.46          |
+| 263    | 9612         | 2.74          |
 
 
 ### Mortality by primary condition
@@ -1090,13 +1077,13 @@ ORDER BY mortality_pct DESC;
 
 | primary_condition | total_spells | deaths | mortality_pct |
 |-------------------|--------------|--------|---------------|
-| ortho             | 1178         | 21     | 1.78          |
-| neuro             | 1079         | 19     | 1.76          |
-| obstetric         | 658          | 10     | 1.52          |
-| respiratory       | 1462         | 21     | 1.44          |
-| cardiac           | 1703         | 23     | 1.35          |
-| infectious        | 799          | 10     | 1.25          |
-| GI                | 1249         | 15     | 1.2           |
+| neuro             | 1175         | 45     | 3.83          |
+| cardiac           | 2113         | 72     | 3.41          |
+| respiratory       | 1778         | 59     | 3.32          |
+| GI                | 1366         | 30     | 2.2           |
+| infectious        | 926          | 20     | 2.16          |
+| ortho             | 1525         | 28     | 1.84          |
+| obstetric         | 729          | 9      | 1.23          |
 
 
 ### Mortality trend by year
@@ -1124,9 +1111,9 @@ ORDER BY yr;
 
 | yr   | total_spells | deaths | mortality_pct |
 |------|--------------|--------|---------------|
-| 2023 | 1636         | 23     | 1.41          |
-| 2024 | 2715         | 38     | 1.4           |
-| 2025 | 3777         | 58     | 1.54          |
+| 2023 | 1928         | 52     | 2.7           |
+| 2024 | 3274         | 85     | 2.6           |
+| 2025 | 4410         | 126    | 2.86          |
 
 
 ---
@@ -1157,42 +1144,42 @@ ORDER BY a.month;
 
 | month      | admissions | incidents | incidents_per_1000 |
 |------------|------------|-----------|--------------------|
-| 2023-01-01 | 75         | 4         | 53.3               |
-| 2023-02-01 | 94         | 0         | 0                  |
-| 2023-03-01 | 110        | 3         | 27.3               |
-| 2023-04-01 | 134        | 0         | 0                  |
-| 2023-05-01 | 137        | 3         | 21.9               |
-| 2023-06-01 | 117        | 0         | 0                  |
-| 2023-07-01 | 136        | 1         | 7.4                |
-| 2023-08-01 | 145        | 1         | 6.9                |
-| 2023-09-01 | 155        | 3         | 19.4               |
-| 2023-10-01 | 155        | 0         | 0                  |
-| 2023-11-01 | 199        | 0         | 0                  |
-| 2023-12-01 | 179        | 1         | 5.6                |
-| 2024-01-01 | 231        | 4         | 17.3               |
-| 2024-02-01 | 191        | 6         | 31.4               |
-| 2024-03-01 | 245        | 2         | 8.2                |
-| 2024-04-01 | 203        | 2         | 9.9                |
-| 2024-05-01 | 212        | 5         | 23.6               |
-| 2024-06-01 | 212        | 6         | 28.3               |
-| 2024-07-01 | 217        | 0         | 0                  |
-| 2024-08-01 | 223        | 1         | 4.5                |
-| 2024-09-01 | 220        | 4         | 18.2               |
-| 2024-10-01 | 246        | 3         | 12.2               |
-| 2024-11-01 | 252        | 0         | 0                  |
-| 2024-12-01 | 263        | 5         | 19                 |
-| 2025-01-01 | 304        | 3         | 9.9                |
-| 2025-02-01 | 292        | 8         | 27.4               |
-| 2025-03-01 | 328        | 7         | 21.3               |
-| 2025-04-01 | 337        | 4         | 11.9               |
-| 2025-05-01 | 285        | 3         | 10.5               |
-| 2025-06-01 | 276        | 2         | 7.2                |
-| 2025-07-01 | 318        | 1         | 3.1                |
-| 2025-08-01 | 311        | 5         | 16.1               |
-| 2025-09-01 | 329        | 3         | 9.1                |
-| 2025-10-01 | 317        | 1         | 3.2                |
-| 2025-11-01 | 319        | 6         | 18.8               |
-| 2025-12-01 | 361        | 6         | 16.6               |
+| 2023-01-01 | 84         | 0         | 0                  |
+| 2023-02-01 | 89         | 2         | 22.5               |
+| 2023-03-01 | 133        | 4         | 30.1               |
+| 2023-04-01 | 154        | 3         | 19.5               |
+| 2023-05-01 | 168        | 6         | 35.7               |
+| 2023-06-01 | 174        | 7         | 40.2               |
+| 2023-07-01 | 153        | 9         | 58.8               |
+| 2023-08-01 | 187        | 6         | 32.1               |
+| 2023-09-01 | 181        | 11        | 60.8               |
+| 2023-10-01 | 182        | 8         | 44                 |
+| 2023-11-01 | 201        | 12        | 59.7               |
+| 2023-12-01 | 222        | 10        | 45                 |
+| 2024-01-01 | 217        | 10        | 46.1               |
+| 2024-02-01 | 234        | 12        | 51.3               |
+| 2024-03-01 | 238        | 15        | 63                 |
+| 2024-04-01 | 277        | 13        | 46.9               |
+| 2024-05-01 | 262        | 13        | 49.6               |
+| 2024-06-01 | 275        | 12        | 43.6               |
+| 2024-07-01 | 245        | 13        | 53.1               |
+| 2024-08-01 | 309        | 9         | 29.1               |
+| 2024-09-01 | 273        | 11        | 40.3               |
+| 2024-10-01 | 297        | 9         | 30.3               |
+| 2024-11-01 | 330        | 17        | 51.5               |
+| 2024-12-01 | 317        | 20        | 63.1               |
+| 2025-01-01 | 353        | 19        | 53.8               |
+| 2025-02-01 | 316        | 13        | 41.1               |
+| 2025-03-01 | 335        | 12        | 35.8               |
+| 2025-04-01 | 353        | 17        | 48.2               |
+| 2025-05-01 | 371        | 17        | 45.8               |
+| 2025-06-01 | 340        | 14        | 41.2               |
+| 2025-07-01 | 376        | 15        | 39.9               |
+| 2025-08-01 | 374        | 9         | 24.1               |
+| 2025-09-01 | 396        | 14        | 35.4               |
+| 2025-10-01 | 427        | 21        | 49.2               |
+| 2025-11-01 | 370        | 14        | 37.8               |
+| 2025-12-01 | 399        | 21        | 52.6               |
 
 
 ### Incidents by ward
@@ -1211,16 +1198,16 @@ ORDER BY incidents DESC;
 
 | ward_name                | ward_type  | incidents |
 |--------------------------|------------|-----------|
-| Fleming Ward             | general    | 14        |
-| Midwifery Unit           | maternity  | 13        |
-| Critical Care Unit       | icu_hdu    | 13        |
-| Rainbow Ward             | paediatric | 12        |
-| Jenner Ward              | general    | 11        |
-| Acute Medical Unit (AMU) | assessment | 11        |
-| High Dependency Unit     | icu_hdu    | 10        |
-| Lister Ward              | general    | 7         |
-| Cavell Ward              | step_down  | 6         |
-| Nightingale Ward         | general    | 6         |
+| Acute Medical Unit (AMU) | assessment | 99        |
+| Critical Care Unit       | icu_hdu    | 51        |
+| Lister Ward              | general    | 45        |
+| Rainbow Ward             | paediatric | 43        |
+| Jenner Ward              | general    | 41        |
+| Fleming Ward             | general    | 35        |
+| High Dependency Unit     | icu_hdu    | 33        |
+| Nightingale Ward         | general    | 28        |
+| Midwifery Unit           | maternity  | 26        |
+| Cavell Ward              | step_down  | 17        |
 
 
 ### Incident rate in winter vs summer
@@ -1256,8 +1243,8 @@ ORDER BY season;
 
 | season | total_admissions | total_incidents | incidents_per_1000 |
 |--------|------------------|-----------------|--------------------|
-| summer | 4685             | 48              | 10.2               |
-| winter | 3443             | 55              | 16                 |
+| summer | 5774             | 237             | 41                 |
+| winter | 3838             | 181             | 47.2               |
 
 
 ---
@@ -1291,7 +1278,7 @@ FROM dtoc_delays;
 
 | dtoc_spells | avg_delay_days | median_delay_days | max_delay_days | delayed_over_1wk |
 |-------------|----------------|-------------------|----------------|------------------|
-| 2117        | 1.3            | 1.2               | 4.2            | 0                |
+| 6520        | 2.1            | 1.6               | 18.1           | 227              |
 
 
 ### DTOC delay by ward
@@ -1324,16 +1311,16 @@ ORDER BY avg_delay_days DESC;
 
 | ward_name                | department     | dtoc_spells | avg_delay_days |
 |--------------------------|----------------|-------------|----------------|
-| Jenner Ward              | surgery        | 210         | 1.4            |
-| Critical Care Unit       | critical_care  | 197         | 1.3            |
-| Fleming Ward             | medicine       | 224         | 1.3            |
-| Acute Medical Unit (AMU) | medicine       | 207         | 1.3            |
-| Nightingale Ward         | medicine       | 220         | 1.3            |
-| High Dependency Unit     | critical_care  | 212         | 1.3            |
-| Rainbow Ward             | women_children | 202         | 1.3            |
-| Midwifery Unit           | women_children | 226         | 1.3            |
-| Cavell Ward              | medicine       | 224         | 1.3            |
-| Lister Ward              | medicine       | 195         | 1.2            |
+| Critical Care Unit       | critical_care  | 358         | 2.3            |
+| High Dependency Unit     | critical_care  | 287         | 2.3            |
+| Jenner Ward              | surgery        | 721         | 2.2            |
+| Acute Medical Unit (AMU) | medicine       | 970         | 2.2            |
+| Lister Ward              | medicine       | 900         | 2.1            |
+| Rainbow Ward             | women_children | 518         | 2.1            |
+| Nightingale Ward         | medicine       | 826         | 2.1            |
+| Cavell Ward              | medicine       | 589         | 2.1            |
+| Midwifery Unit           | women_children | 585         | 2.1            |
+| Fleming Ward             | medicine       | 766         | 2.1            |
 
 
 ### DTOC delay by deprivation
@@ -1364,16 +1351,16 @@ ORDER BY patient.imd_decile;
 
 | imd_decile | dtoc_spells | avg_delay_days |
 |------------|-------------|----------------|
-| 1          | 234         | 1.9            |
-| 2          | 192         | 1.9            |
-| 3          | 290         | 1.9            |
-| 4          | 323         | 1              |
-| 5          | 349         | 1              |
-| 6          | 310         | 1              |
-| 7          | 180         | 1              |
-| 8          | 128         | 1              |
-| 9          | 67          | 1              |
-| 10         | 44          | 0.9            |
+| 1          | 722         | 3.4            |
+| 2          | 671         | 3.2            |
+| 3          | 843         | 2.3            |
+| 4          | 979         | 2.4            |
+| 5          | 1065        | 1.8            |
+| 6          | 920         | 1.8            |
+| 7          | 591         | 1.3            |
+| 8          | 370         | 1.3            |
+| 9          | 207         | 1              |
+| 10         | 152         | 1              |
 
 
 ---
@@ -1397,16 +1384,16 @@ ORDER BY total_assignments DESC;
 
 | ward_name                | ward_type  | total_beds | total_assignments |
 |--------------------------|------------|------------|-------------------|
-| Critical Care Unit       | icu_hdu    | 4          | 586               |
-| High Dependency Unit     | icu_hdu    | 3          | 582               |
-| Cavell Ward              | step_down  | 7          | 581               |
-| Midwifery Unit           | maternity  | 7          | 577               |
-| Nightingale Ward         | general    | 10         | 570               |
-| Fleming Ward             | general    | 9          | 568               |
-| Jenner Ward              | general    | 8          | 561               |
-| Lister Ward              | general    | 10         | 542               |
-| Acute Medical Unit (AMU) | assessment | 11         | 531               |
-| Rainbow Ward             | paediatric | 6          | 518               |
+| Acute Medical Unit (AMU) | assessment | 11         | 1034              |
+| Lister Ward              | general    | 10         | 939               |
+| Nightingale Ward         | general    | 10         | 872               |
+| Fleming Ward             | general    | 9          | 806               |
+| Jenner Ward              | general    | 8          | 769               |
+| Cavell Ward              | step_down  | 7          | 631               |
+| Midwifery Unit           | maternity  | 7          | 629               |
+| Rainbow Ward             | paediatric | 6          | 549               |
+| Critical Care Unit       | icu_hdu    | 4          | 375               |
+| High Dependency Unit     | icu_hdu    | 3          | 295               |
 
 
 ### Monthly ward activity as a proxy for utilisation
@@ -1427,366 +1414,366 @@ ORDER BY month, ward.ward_name;
 
 | month      | ward_name                | total_beds | assignments | assignments_per_bed |
 |------------|--------------------------|------------|-------------|---------------------|
-| 2023-01-01 | Acute Medical Unit (AMU) | 11         | 4           | 0.4                 |
-| 2023-01-01 | Cavell Ward              | 7          | 6           | 0.9                 |
-| 2023-01-01 | Critical Care Unit       | 4          | 8           | 2                   |
-| 2023-01-01 | Fleming Ward             | 9          | 3           | 0.3                 |
-| 2023-01-01 | High Dependency Unit     | 3          | 4           | 1.3                 |
-| 2023-01-01 | Jenner Ward              | 8          | 4           | 0.5                 |
-| 2023-01-01 | Lister Ward              | 10         | 5           | 0.5                 |
-| 2023-01-01 | Midwifery Unit           | 7          | 8           | 1.1                 |
-| 2023-01-01 | Nightingale Ward         | 10         | 5           | 0.5                 |
-| 2023-01-01 | Rainbow Ward             | 6          | 5           | 0.8                 |
-| 2023-02-01 | Acute Medical Unit (AMU) | 11         | 8           | 0.7                 |
-| 2023-02-01 | Cavell Ward              | 7          | 9           | 1.3                 |
-| 2023-02-01 | Critical Care Unit       | 4          | 8           | 2                   |
-| 2023-02-01 | Fleming Ward             | 9          | 2           | 0.2                 |
-| 2023-02-01 | High Dependency Unit     | 3          | 10          | 3.3                 |
-| 2023-02-01 | Jenner Ward              | 8          | 7           | 0.9                 |
-| 2023-02-01 | Lister Ward              | 10         | 7           | 0.7                 |
-| 2023-02-01 | Midwifery Unit           | 7          | 4           | 0.6                 |
+| 2023-01-01 | Acute Medical Unit (AMU) | 11         | 7           | 0.6                 |
+| 2023-01-01 | Cavell Ward              | 7          | 8           | 1.1                 |
+| 2023-01-01 | Critical Care Unit       | 4          | 2           | 0.5                 |
+| 2023-01-01 | Fleming Ward             | 9          | 6           | 0.7                 |
+| 2023-01-01 | High Dependency Unit     | 3          | 2           | 0.7                 |
+| 2023-01-01 | Jenner Ward              | 8          | 3           | 0.4                 |
+| 2023-01-01 | Lister Ward              | 10         | 11          | 1.1                 |
+| 2023-01-01 | Midwifery Unit           | 7          | 6           | 0.9                 |
+| 2023-01-01 | Nightingale Ward         | 10         | 6           | 0.6                 |
+| 2023-01-01 | Rainbow Ward             | 6          | 3           | 0.5                 |
+| 2023-02-01 | Acute Medical Unit (AMU) | 11         | 12          | 1.1                 |
+| 2023-02-01 | Cavell Ward              | 7          | 5           | 0.7                 |
+| 2023-02-01 | Critical Care Unit       | 4          | 4           | 1                   |
+| 2023-02-01 | Fleming Ward             | 9          | 7           | 0.8                 |
+| 2023-02-01 | High Dependency Unit     | 3          | 2           | 0.7                 |
+| 2023-02-01 | Jenner Ward              | 8          | 5           | 0.6                 |
+| 2023-02-01 | Lister Ward              | 10         | 10          | 1                   |
+| 2023-02-01 | Midwifery Unit           | 7          | 5           | 0.7                 |
 | 2023-02-01 | Nightingale Ward         | 10         | 8           | 0.8                 |
-| 2023-02-01 | Rainbow Ward             | 6          | 3           | 0.5                 |
-| 2023-03-01 | Acute Medical Unit (AMU) | 11         | 8           | 0.7                 |
-| 2023-03-01 | Cavell Ward              | 7          | 6           | 0.9                 |
-| 2023-03-01 | Critical Care Unit       | 4          | 3           | 0.8                 |
-| 2023-03-01 | Fleming Ward             | 9          | 3           | 0.3                 |
-| 2023-03-01 | High Dependency Unit     | 3          | 10          | 3.3                 |
-| 2023-03-01 | Jenner Ward              | 8          | 12          | 1.5                 |
-| 2023-03-01 | Lister Ward              | 10         | 5           | 0.5                 |
-| 2023-03-01 | Midwifery Unit           | 7          | 11          | 1.6                 |
-| 2023-03-01 | Nightingale Ward         | 10         | 10          | 1                   |
-| 2023-03-01 | Rainbow Ward             | 6          | 5           | 0.8                 |
-| 2023-04-01 | Acute Medical Unit (AMU) | 11         | 6           | 0.5                 |
-| 2023-04-01 | Cavell Ward              | 7          | 11          | 1.6                 |
-| 2023-04-01 | Critical Care Unit       | 4          | 6           | 1.5                 |
+| 2023-02-01 | Rainbow Ward             | 6          | 8           | 1.3                 |
+| 2023-03-01 | Acute Medical Unit (AMU) | 11         | 17          | 1.5                 |
+| 2023-03-01 | Cavell Ward              | 7          | 8           | 1.1                 |
+| 2023-03-01 | Critical Care Unit       | 4          | 4           | 1                   |
+| 2023-03-01 | Fleming Ward             | 9          | 17          | 1.9                 |
+| 2023-03-01 | High Dependency Unit     | 3          | 3           | 1                   |
+| 2023-03-01 | Jenner Ward              | 8          | 10          | 1.3                 |
+| 2023-03-01 | Lister Ward              | 10         | 7           | 0.7                 |
+| 2023-03-01 | Midwifery Unit           | 7          | 9           | 1.3                 |
+| 2023-03-01 | Nightingale Ward         | 10         | 8           | 0.8                 |
+| 2023-03-01 | Rainbow Ward             | 6          | 12          | 2                   |
+| 2023-04-01 | Acute Medical Unit (AMU) | 11         | 20          | 1.8                 |
+| 2023-04-01 | Cavell Ward              | 7          | 12          | 1.7                 |
+| 2023-04-01 | Critical Care Unit       | 4          | 3           | 0.8                 |
 | 2023-04-01 | Fleming Ward             | 9          | 11          | 1.2                 |
-| 2023-04-01 | High Dependency Unit     | 3          | 12          | 4                   |
-| 2023-04-01 | Jenner Ward              | 8          | 12          | 1.5                 |
-| 2023-04-01 | Lister Ward              | 10         | 10          | 1                   |
-| 2023-04-01 | Midwifery Unit           | 7          | 10          | 1.4                 |
-| 2023-04-01 | Nightingale Ward         | 10         | 6           | 0.6                 |
-| 2023-04-01 | Rainbow Ward             | 6          | 10          | 1.7                 |
-| 2023-05-01 | Acute Medical Unit (AMU) | 11         | 8           | 0.7                 |
-| 2023-05-01 | Cavell Ward              | 7          | 7           | 1                   |
-| 2023-05-01 | Critical Care Unit       | 4          | 14          | 3.5                 |
-| 2023-05-01 | Fleming Ward             | 9          | 8           | 0.9                 |
-| 2023-05-01 | High Dependency Unit     | 3          | 11          | 3.7                 |
-| 2023-05-01 | Jenner Ward              | 8          | 8           | 1                   |
-| 2023-05-01 | Lister Ward              | 10         | 12          | 1.2                 |
-| 2023-05-01 | Midwifery Unit           | 7          | 7           | 1                   |
-| 2023-05-01 | Nightingale Ward         | 10         | 12          | 1.2                 |
-| 2023-05-01 | Rainbow Ward             | 6          | 6           | 1                   |
-| 2023-06-01 | Acute Medical Unit (AMU) | 11         | 6           | 0.5                 |
-| 2023-06-01 | Cavell Ward              | 7          | 7           | 1                   |
-| 2023-06-01 | Critical Care Unit       | 4          | 11          | 2.8                 |
-| 2023-06-01 | Fleming Ward             | 9          | 11          | 1.2                 |
-| 2023-06-01 | High Dependency Unit     | 3          | 11          | 3.7                 |
-| 2023-06-01 | Jenner Ward              | 8          | 7           | 0.9                 |
-| 2023-06-01 | Lister Ward              | 10         | 6           | 0.6                 |
-| 2023-06-01 | Midwifery Unit           | 7          | 7           | 1                   |
+| 2023-04-01 | High Dependency Unit     | 3          | 5           | 1.7                 |
+| 2023-04-01 | Jenner Ward              | 8          | 16          | 2                   |
+| 2023-04-01 | Lister Ward              | 10         | 21          | 2.1                 |
+| 2023-04-01 | Midwifery Unit           | 7          | 9           | 1.3                 |
+| 2023-04-01 | Nightingale Ward         | 10         | 18          | 1.8                 |
+| 2023-04-01 | Rainbow Ward             | 6          | 4           | 0.7                 |
+| 2023-05-01 | Acute Medical Unit (AMU) | 11         | 18          | 1.6                 |
+| 2023-05-01 | Cavell Ward              | 7          | 14          | 2                   |
+| 2023-05-01 | Critical Care Unit       | 4          | 9           | 2.3                 |
+| 2023-05-01 | Fleming Ward             | 9          | 13          | 1.4                 |
+| 2023-05-01 | High Dependency Unit     | 3          | 8           | 2.7                 |
+| 2023-05-01 | Jenner Ward              | 8          | 12          | 1.5                 |
+| 2023-05-01 | Lister Ward              | 10         | 14          | 1.4                 |
+| 2023-05-01 | Midwifery Unit           | 7          | 8           | 1.1                 |
+| 2023-05-01 | Nightingale Ward         | 10         | 8           | 0.8                 |
+| 2023-05-01 | Rainbow Ward             | 6          | 11          | 1.8                 |
+| 2023-06-01 | Acute Medical Unit (AMU) | 11         | 16          | 1.5                 |
+| 2023-06-01 | Cavell Ward              | 7          | 12          | 1.7                 |
+| 2023-06-01 | Critical Care Unit       | 4          | 6           | 1.5                 |
+| 2023-06-01 | Fleming Ward             | 9          | 15          | 1.7                 |
+| 2023-06-01 | High Dependency Unit     | 3          | 3           | 1                   |
+| 2023-06-01 | Jenner Ward              | 8          | 21          | 2.6                 |
+| 2023-06-01 | Lister Ward              | 10         | 20          | 2                   |
+| 2023-06-01 | Midwifery Unit           | 7          | 11          | 1.6                 |
 | 2023-06-01 | Nightingale Ward         | 10         | 9           | 0.9                 |
 | 2023-06-01 | Rainbow Ward             | 6          | 8           | 1.3                 |
-| 2023-07-01 | Acute Medical Unit (AMU) | 11         | 12          | 1.1                 |
-| 2023-07-01 | Cavell Ward              | 7          | 11          | 1.6                 |
-| 2023-07-01 | Critical Care Unit       | 4          | 8           | 2                   |
-| 2023-07-01 | Fleming Ward             | 9          | 6           | 0.7                 |
-| 2023-07-01 | High Dependency Unit     | 3          | 7           | 2.3                 |
-| 2023-07-01 | Jenner Ward              | 8          | 10          | 1.3                 |
-| 2023-07-01 | Lister Ward              | 10         | 11          | 1.1                 |
-| 2023-07-01 | Midwifery Unit           | 7          | 11          | 1.6                 |
-| 2023-07-01 | Nightingale Ward         | 10         | 8           | 0.8                 |
-| 2023-07-01 | Rainbow Ward             | 6          | 11          | 1.8                 |
-| 2023-08-01 | Acute Medical Unit (AMU) | 11         | 8           | 0.7                 |
-| 2023-08-01 | Cavell Ward              | 7          | 7           | 1                   |
-| 2023-08-01 | Critical Care Unit       | 4          | 11          | 2.8                 |
-| 2023-08-01 | Fleming Ward             | 9          | 21          | 2.3                 |
-| 2023-08-01 | High Dependency Unit     | 3          | 9           | 3                   |
+| 2023-07-01 | Acute Medical Unit (AMU) | 11         | 15          | 1.4                 |
+| 2023-07-01 | Cavell Ward              | 7          | 6           | 0.9                 |
+| 2023-07-01 | Critical Care Unit       | 4          | 3           | 0.8                 |
+| 2023-07-01 | Fleming Ward             | 9          | 16          | 1.8                 |
+| 2023-07-01 | High Dependency Unit     | 3          | 5           | 1.7                 |
+| 2023-07-01 | Jenner Ward              | 8          | 14          | 1.8                 |
+| 2023-07-01 | Lister Ward              | 10         | 19          | 1.9                 |
+| 2023-07-01 | Midwifery Unit           | 7          | 10          | 1.4                 |
+| 2023-07-01 | Nightingale Ward         | 10         | 18          | 1.8                 |
+| 2023-07-01 | Rainbow Ward             | 6          | 6           | 1                   |
+| 2023-08-01 | Acute Medical Unit (AMU) | 11         | 25          | 2.3                 |
+| 2023-08-01 | Cavell Ward              | 7          | 13          | 1.9                 |
+| 2023-08-01 | Critical Care Unit       | 4          | 7           | 1.8                 |
+| 2023-08-01 | Fleming Ward             | 9          | 13          | 1.4                 |
+| 2023-08-01 | High Dependency Unit     | 3          | 6           | 2                   |
 | 2023-08-01 | Jenner Ward              | 8          | 12          | 1.5                 |
-| 2023-08-01 | Lister Ward              | 10         | 7           | 0.7                 |
-| 2023-08-01 | Midwifery Unit           | 7          | 12          | 1.7                 |
-| 2023-08-01 | Nightingale Ward         | 10         | 5           | 0.5                 |
-| 2023-08-01 | Rainbow Ward             | 6          | 10          | 1.7                 |
-| 2023-09-01 | Acute Medical Unit (AMU) | 11         | 10          | 0.9                 |
-| 2023-09-01 | Cavell Ward              | 7          | 3           | 0.4                 |
-| 2023-09-01 | Critical Care Unit       | 4          | 13          | 3.3                 |
-| 2023-09-01 | Fleming Ward             | 9          | 14          | 1.6                 |
-| 2023-09-01 | High Dependency Unit     | 3          | 12          | 4                   |
+| 2023-08-01 | Lister Ward              | 10         | 21          | 2.1                 |
+| 2023-08-01 | Midwifery Unit           | 7          | 10          | 1.4                 |
+| 2023-08-01 | Nightingale Ward         | 10         | 20          | 2                   |
+| 2023-08-01 | Rainbow Ward             | 6          | 11          | 1.8                 |
+| 2023-09-01 | Acute Medical Unit (AMU) | 11         | 26          | 2.4                 |
+| 2023-09-01 | Cavell Ward              | 7          | 9           | 1.3                 |
+| 2023-09-01 | Critical Care Unit       | 4          | 9           | 2.3                 |
+| 2023-09-01 | Fleming Ward             | 9          | 15          | 1.7                 |
+| 2023-09-01 | High Dependency Unit     | 3          | 3           | 1                   |
 | 2023-09-01 | Jenner Ward              | 8          | 18          | 2.3                 |
-| 2023-09-01 | Lister Ward              | 10         | 12          | 1.2                 |
-| 2023-09-01 | Midwifery Unit           | 7          | 12          | 1.7                 |
-| 2023-09-01 | Nightingale Ward         | 10         | 12          | 1.2                 |
-| 2023-09-01 | Rainbow Ward             | 6          | 9           | 1.5                 |
-| 2023-10-01 | Acute Medical Unit (AMU) | 11         | 12          | 1.1                 |
-| 2023-10-01 | Cavell Ward              | 7          | 18          | 2.6                 |
-| 2023-10-01 | Critical Care Unit       | 4          | 15          | 3.8                 |
-| 2023-10-01 | Fleming Ward             | 9          | 7           | 0.8                 |
-| 2023-10-01 | High Dependency Unit     | 3          | 11          | 3.7                 |
-| 2023-10-01 | Jenner Ward              | 8          | 8           | 1                   |
-| 2023-10-01 | Lister Ward              | 10         | 12          | 1.2                 |
-| 2023-10-01 | Midwifery Unit           | 7          | 8           | 1.1                 |
-| 2023-10-01 | Nightingale Ward         | 10         | 12          | 1.2                 |
-| 2023-10-01 | Rainbow Ward             | 6          | 12          | 2                   |
-| 2023-11-01 | Acute Medical Unit (AMU) | 11         | 9           | 0.8                 |
-| 2023-11-01 | Cavell Ward              | 7          | 16          | 2.3                 |
-| 2023-11-01 | Critical Care Unit       | 4          | 18          | 4.5                 |
-| 2023-11-01 | Fleming Ward             | 9          | 12          | 1.3                 |
-| 2023-11-01 | High Dependency Unit     | 3          | 16          | 5.3                 |
-| 2023-11-01 | Jenner Ward              | 8          | 15          | 1.9                 |
-| 2023-11-01 | Lister Ward              | 10         | 9           | 0.9                 |
-| 2023-11-01 | Midwifery Unit           | 7          | 13          | 1.9                 |
-| 2023-11-01 | Nightingale Ward         | 10         | 15          | 1.5                 |
+| 2023-09-01 | Lister Ward              | 10         | 21          | 2.1                 |
+| 2023-09-01 | Midwifery Unit           | 7          | 8           | 1.1                 |
+| 2023-09-01 | Nightingale Ward         | 10         | 15          | 1.5                 |
+| 2023-09-01 | Rainbow Ward             | 6          | 15          | 2.5                 |
+| 2023-10-01 | Acute Medical Unit (AMU) | 11         | 23          | 2.1                 |
+| 2023-10-01 | Cavell Ward              | 7          | 10          | 1.4                 |
+| 2023-10-01 | Critical Care Unit       | 4          | 8           | 2                   |
+| 2023-10-01 | Fleming Ward             | 9          | 6           | 0.7                 |
+| 2023-10-01 | High Dependency Unit     | 3          | 5           | 1.7                 |
+| 2023-10-01 | Jenner Ward              | 8          | 16          | 2                   |
+| 2023-10-01 | Lister Ward              | 10         | 16          | 1.6                 |
+| 2023-10-01 | Midwifery Unit           | 7          | 12          | 1.7                 |
+| 2023-10-01 | Nightingale Ward         | 10         | 14          | 1.4                 |
+| 2023-10-01 | Rainbow Ward             | 6          | 8           | 1.3                 |
+| 2023-11-01 | Acute Medical Unit (AMU) | 11         | 24          | 2.2                 |
+| 2023-11-01 | Cavell Ward              | 7          | 9           | 1.3                 |
+| 2023-11-01 | Critical Care Unit       | 4          | 6           | 1.5                 |
+| 2023-11-01 | Fleming Ward             | 9          | 14          | 1.6                 |
+| 2023-11-01 | High Dependency Unit     | 3          | 9           | 3                   |
+| 2023-11-01 | Jenner Ward              | 8          | 19          | 2.4                 |
+| 2023-11-01 | Lister Ward              | 10         | 20          | 2                   |
+| 2023-11-01 | Midwifery Unit           | 7          | 14          | 2                   |
+| 2023-11-01 | Nightingale Ward         | 10         | 21          | 2.1                 |
 | 2023-11-01 | Rainbow Ward             | 6          | 13          | 2.2                 |
-| 2023-12-01 | Acute Medical Unit (AMU) | 11         | 11          | 1                   |
-| 2023-12-01 | Cavell Ward              | 7          | 11          | 1.6                 |
-| 2023-12-01 | Critical Care Unit       | 4          | 17          | 4.3                 |
-| 2023-12-01 | Fleming Ward             | 9          | 8           | 0.9                 |
-| 2023-12-01 | High Dependency Unit     | 3          | 16          | 5.3                 |
-| 2023-12-01 | Jenner Ward              | 8          | 7           | 0.9                 |
-| 2023-12-01 | Lister Ward              | 10         | 13          | 1.3                 |
-| 2023-12-01 | Midwifery Unit           | 7          | 9           | 1.3                 |
-| 2023-12-01 | Nightingale Ward         | 10         | 15          | 1.5                 |
-| 2023-12-01 | Rainbow Ward             | 6          | 18          | 3                   |
-| 2024-01-01 | Acute Medical Unit (AMU) | 11         | 13          | 1.2                 |
+| 2023-12-01 | Acute Medical Unit (AMU) | 11         | 25          | 2.3                 |
+| 2023-12-01 | Cavell Ward              | 7          | 12          | 1.7                 |
+| 2023-12-01 | Critical Care Unit       | 4          | 11          | 2.8                 |
+| 2023-12-01 | Fleming Ward             | 9          | 17          | 1.9                 |
+| 2023-12-01 | High Dependency Unit     | 3          | 10          | 3.3                 |
+| 2023-12-01 | Jenner Ward              | 8          | 19          | 2.4                 |
+| 2023-12-01 | Lister Ward              | 10         | 17          | 1.7                 |
+| 2023-12-01 | Midwifery Unit           | 7          | 16          | 2.3                 |
+| 2023-12-01 | Nightingale Ward         | 10         | 21          | 2.1                 |
+| 2023-12-01 | Rainbow Ward             | 6          | 7           | 1.2                 |
+| 2024-01-01 | Acute Medical Unit (AMU) | 11         | 23          | 2.1                 |
 | 2024-01-01 | Cavell Ward              | 7          | 19          | 2.7                 |
-| 2024-01-01 | Critical Care Unit       | 4          | 16          | 4                   |
-| 2024-01-01 | Fleming Ward             | 9          | 15          | 1.7                 |
-| 2024-01-01 | High Dependency Unit     | 3          | 20          | 6.7                 |
-| 2024-01-01 | Jenner Ward              | 8          | 16          | 2                   |
-| 2024-01-01 | Lister Ward              | 10         | 14          | 1.4                 |
-| 2024-01-01 | Midwifery Unit           | 7          | 24          | 3.4                 |
-| 2024-01-01 | Nightingale Ward         | 10         | 13          | 1.3                 |
-| 2024-01-01 | Rainbow Ward             | 6          | 16          | 2.7                 |
-| 2024-02-01 | Acute Medical Unit (AMU) | 11         | 9           | 0.8                 |
-| 2024-02-01 | Cavell Ward              | 7          | 11          | 1.6                 |
-| 2024-02-01 | Critical Care Unit       | 4          | 11          | 2.8                 |
-| 2024-02-01 | Fleming Ward             | 9          | 17          | 1.9                 |
-| 2024-02-01 | High Dependency Unit     | 3          | 16          | 5.3                 |
-| 2024-02-01 | Jenner Ward              | 8          | 17          | 2.1                 |
-| 2024-02-01 | Lister Ward              | 10         | 15          | 1.5                 |
-| 2024-02-01 | Midwifery Unit           | 7          | 13          | 1.9                 |
-| 2024-02-01 | Nightingale Ward         | 10         | 15          | 1.5                 |
-| 2024-02-01 | Rainbow Ward             | 6          | 9           | 1.5                 |
-| 2024-03-01 | Acute Medical Unit (AMU) | 11         | 17          | 1.5                 |
-| 2024-03-01 | Cavell Ward              | 7          | 15          | 2.1                 |
-| 2024-03-01 | Critical Care Unit       | 4          | 18          | 4.5                 |
-| 2024-03-01 | Fleming Ward             | 9          | 18          | 2                   |
-| 2024-03-01 | High Dependency Unit     | 3          | 11          | 3.7                 |
-| 2024-03-01 | Jenner Ward              | 8          | 16          | 2                   |
-| 2024-03-01 | Lister Ward              | 10         | 9           | 0.9                 |
-| 2024-03-01 | Midwifery Unit           | 7          | 21          | 3                   |
-| 2024-03-01 | Nightingale Ward         | 10         | 18          | 1.8                 |
-| 2024-03-01 | Rainbow Ward             | 6          | 20          | 3.3                 |
-| 2024-04-01 | Acute Medical Unit (AMU) | 11         | 13          | 1.2                 |
-| 2024-04-01 | Cavell Ward              | 7          | 17          | 2.4                 |
-| 2024-04-01 | Critical Care Unit       | 4          | 12          | 3                   |
-| 2024-04-01 | Fleming Ward             | 9          | 13          | 1.4                 |
-| 2024-04-01 | High Dependency Unit     | 3          | 12          | 4                   |
-| 2024-04-01 | Jenner Ward              | 8          | 9           | 1.1                 |
-| 2024-04-01 | Lister Ward              | 10         | 13          | 1.3                 |
-| 2024-04-01 | Midwifery Unit           | 7          | 12          | 1.7                 |
-| 2024-04-01 | Nightingale Ward         | 10         | 14          | 1.4                 |
-| 2024-04-01 | Rainbow Ward             | 6          | 14          | 2.3                 |
-| 2024-05-01 | Acute Medical Unit (AMU) | 11         | 16          | 1.5                 |
-| 2024-05-01 | Cavell Ward              | 7          | 21          | 3                   |
-| 2024-05-01 | Critical Care Unit       | 4          | 17          | 4.3                 |
-| 2024-05-01 | Fleming Ward             | 9          | 15          | 1.7                 |
-| 2024-05-01 | High Dependency Unit     | 3          | 19          | 6.3                 |
-| 2024-05-01 | Jenner Ward              | 8          | 10          | 1.3                 |
-| 2024-05-01 | Lister Ward              | 10         | 16          | 1.6                 |
-| 2024-05-01 | Midwifery Unit           | 7          | 16          | 2.3                 |
-| 2024-05-01 | Nightingale Ward         | 10         | 21          | 2.1                 |
-| 2024-05-01 | Rainbow Ward             | 6          | 12          | 2                   |
-| 2024-06-01 | Acute Medical Unit (AMU) | 11         | 11          | 1                   |
-| 2024-06-01 | Cavell Ward              | 7          | 25          | 3.6                 |
-| 2024-06-01 | Critical Care Unit       | 4          | 17          | 4.3                 |
-| 2024-06-01 | Fleming Ward             | 9          | 15          | 1.7                 |
-| 2024-06-01 | High Dependency Unit     | 3          | 23          | 7.7                 |
-| 2024-06-01 | Jenner Ward              | 8          | 16          | 2                   |
-| 2024-06-01 | Lister Ward              | 10         | 17          | 1.7                 |
-| 2024-06-01 | Midwifery Unit           | 7          | 5           | 0.7                 |
-| 2024-06-01 | Nightingale Ward         | 10         | 21          | 2.1                 |
-| 2024-06-01 | Rainbow Ward             | 6          | 12          | 2                   |
-| 2024-07-01 | Acute Medical Unit (AMU) | 11         | 13          | 1.2                 |
-| 2024-07-01 | Cavell Ward              | 7          | 9           | 1.3                 |
-| 2024-07-01 | Critical Care Unit       | 4          | 15          | 3.8                 |
-| 2024-07-01 | Fleming Ward             | 9          | 17          | 1.9                 |
-| 2024-07-01 | High Dependency Unit     | 3          | 16          | 5.3                 |
-| 2024-07-01 | Jenner Ward              | 8          | 12          | 1.5                 |
+| 2024-01-01 | Critical Care Unit       | 4          | 12          | 3                   |
+| 2024-01-01 | Fleming Ward             | 9          | 12          | 1.3                 |
+| 2024-01-01 | High Dependency Unit     | 3          | 6           | 2                   |
+| 2024-01-01 | Jenner Ward              | 8          | 20          | 2.5                 |
+| 2024-01-01 | Lister Ward              | 10         | 18          | 1.8                 |
+| 2024-01-01 | Midwifery Unit           | 7          | 11          | 1.6                 |
+| 2024-01-01 | Nightingale Ward         | 10         | 21          | 2.1                 |
+| 2024-01-01 | Rainbow Ward             | 6          | 9           | 1.5                 |
+| 2024-02-01 | Acute Medical Unit (AMU) | 11         | 22          | 2                   |
+| 2024-02-01 | Cavell Ward              | 7          | 22          | 3.1                 |
+| 2024-02-01 | Critical Care Unit       | 4          | 7           | 1.8                 |
+| 2024-02-01 | Fleming Ward             | 9          | 19          | 2.1                 |
+| 2024-02-01 | High Dependency Unit     | 3          | 9           | 3                   |
+| 2024-02-01 | Jenner Ward              | 8          | 22          | 2.8                 |
+| 2024-02-01 | Lister Ward              | 10         | 22          | 2.2                 |
+| 2024-02-01 | Midwifery Unit           | 7          | 16          | 2.3                 |
+| 2024-02-01 | Nightingale Ward         | 10         | 23          | 2.3                 |
+| 2024-02-01 | Rainbow Ward             | 6          | 15          | 2.5                 |
+| 2024-03-01 | Acute Medical Unit (AMU) | 11         | 21          | 1.9                 |
+| 2024-03-01 | Cavell Ward              | 7          | 14          | 2                   |
+| 2024-03-01 | Critical Care Unit       | 4          | 7           | 1.8                 |
+| 2024-03-01 | Fleming Ward             | 9          | 20          | 2.2                 |
+| 2024-03-01 | High Dependency Unit     | 3          | 7           | 2.3                 |
+| 2024-03-01 | Jenner Ward              | 8          | 17          | 2.1                 |
+| 2024-03-01 | Lister Ward              | 10         | 32          | 3.2                 |
+| 2024-03-01 | Midwifery Unit           | 7          | 20          | 2.9                 |
+| 2024-03-01 | Nightingale Ward         | 10         | 22          | 2.2                 |
+| 2024-03-01 | Rainbow Ward             | 6          | 12          | 2                   |
+| 2024-04-01 | Acute Medical Unit (AMU) | 11         | 28          | 2.5                 |
+| 2024-04-01 | Cavell Ward              | 7          | 15          | 2.1                 |
+| 2024-04-01 | Critical Care Unit       | 4          | 11          | 2.8                 |
+| 2024-04-01 | Fleming Ward             | 9          | 32          | 3.6                 |
+| 2024-04-01 | High Dependency Unit     | 3          | 13          | 4.3                 |
+| 2024-04-01 | Jenner Ward              | 8          | 26          | 3.3                 |
+| 2024-04-01 | Lister Ward              | 10         | 21          | 2.1                 |
+| 2024-04-01 | Midwifery Unit           | 7          | 25          | 3.6                 |
+| 2024-04-01 | Nightingale Ward         | 10         | 24          | 2.4                 |
+| 2024-04-01 | Rainbow Ward             | 6          | 13          | 2.2                 |
+| 2024-05-01 | Acute Medical Unit (AMU) | 11         | 32          | 2.9                 |
+| 2024-05-01 | Cavell Ward              | 7          | 15          | 2.1                 |
+| 2024-05-01 | Critical Care Unit       | 4          | 13          | 3.3                 |
+| 2024-05-01 | Fleming Ward             | 9          | 19          | 2.1                 |
+| 2024-05-01 | High Dependency Unit     | 3          | 5           | 1.7                 |
+| 2024-05-01 | Jenner Ward              | 8          | 24          | 3                   |
+| 2024-05-01 | Lister Ward              | 10         | 25          | 2.5                 |
+| 2024-05-01 | Midwifery Unit           | 7          | 27          | 3.9                 |
+| 2024-05-01 | Nightingale Ward         | 10         | 19          | 1.9                 |
+| 2024-05-01 | Rainbow Ward             | 6          | 15          | 2.5                 |
+| 2024-06-01 | Acute Medical Unit (AMU) | 11         | 26          | 2.4                 |
+| 2024-06-01 | Cavell Ward              | 7          | 16          | 2.3                 |
+| 2024-06-01 | Critical Care Unit       | 4          | 8           | 2                   |
+| 2024-06-01 | Fleming Ward             | 9          | 19          | 2.1                 |
+| 2024-06-01 | High Dependency Unit     | 3          | 5           | 1.7                 |
+| 2024-06-01 | Jenner Ward              | 8          | 26          | 3.3                 |
+| 2024-06-01 | Lister Ward              | 10         | 36          | 3.6                 |
+| 2024-06-01 | Midwifery Unit           | 7          | 15          | 2.1                 |
+| 2024-06-01 | Nightingale Ward         | 10         | 22          | 2.2                 |
+| 2024-06-01 | Rainbow Ward             | 6          | 22          | 3.7                 |
+| 2024-07-01 | Acute Medical Unit (AMU) | 11         | 23          | 2.1                 |
+| 2024-07-01 | Cavell Ward              | 7          | 18          | 2.6                 |
+| 2024-07-01 | Critical Care Unit       | 4          | 6           | 1.5                 |
+| 2024-07-01 | Fleming Ward             | 9          | 27          | 3                   |
+| 2024-07-01 | High Dependency Unit     | 3          | 8           | 2.7                 |
+| 2024-07-01 | Jenner Ward              | 8          | 15          | 1.9                 |
 | 2024-07-01 | Lister Ward              | 10         | 16          | 1.6                 |
-| 2024-07-01 | Midwifery Unit           | 7          | 12          | 1.7                 |
-| 2024-07-01 | Nightingale Ward         | 10         | 17          | 1.7                 |
-| 2024-07-01 | Rainbow Ward             | 6          | 18          | 3                   |
-| 2024-08-01 | Acute Medical Unit (AMU) | 11         | 22          | 2                   |
-| 2024-08-01 | Cavell Ward              | 7          | 14          | 2                   |
+| 2024-07-01 | Midwifery Unit           | 7          | 22          | 3.1                 |
+| 2024-07-01 | Nightingale Ward         | 10         | 23          | 2.3                 |
+| 2024-07-01 | Rainbow Ward             | 6          | 13          | 2.2                 |
+| 2024-08-01 | Acute Medical Unit (AMU) | 11         | 30          | 2.7                 |
+| 2024-08-01 | Cavell Ward              | 7          | 24          | 3.4                 |
 | 2024-08-01 | Critical Care Unit       | 4          | 10          | 2.5                 |
-| 2024-08-01 | Fleming Ward             | 9          | 12          | 1.3                 |
+| 2024-08-01 | Fleming Ward             | 9          | 21          | 2.3                 |
 | 2024-08-01 | High Dependency Unit     | 3          | 14          | 4.7                 |
-| 2024-08-01 | Jenner Ward              | 8          | 18          | 2.3                 |
-| 2024-08-01 | Lister Ward              | 10         | 14          | 1.4                 |
-| 2024-08-01 | Midwifery Unit           | 7          | 23          | 3.3                 |
-| 2024-08-01 | Nightingale Ward         | 10         | 18          | 1.8                 |
-| 2024-08-01 | Rainbow Ward             | 6          | 11          | 1.8                 |
-| 2024-09-01 | Acute Medical Unit (AMU) | 11         | 16          | 1.5                 |
-| 2024-09-01 | Cavell Ward              | 7          | 15          | 2.1                 |
-| 2024-09-01 | Critical Care Unit       | 4          | 12          | 3                   |
-| 2024-09-01 | Fleming Ward             | 9          | 17          | 1.9                 |
-| 2024-09-01 | High Dependency Unit     | 3          | 11          | 3.7                 |
-| 2024-09-01 | Jenner Ward              | 8          | 16          | 2                   |
-| 2024-09-01 | Lister Ward              | 10         | 18          | 1.8                 |
-| 2024-09-01 | Midwifery Unit           | 7          | 14          | 2                   |
-| 2024-09-01 | Nightingale Ward         | 10         | 13          | 1.3                 |
+| 2024-08-01 | Jenner Ward              | 8          | 22          | 2.8                 |
+| 2024-08-01 | Lister Ward              | 10         | 36          | 3.6                 |
+| 2024-08-01 | Midwifery Unit           | 7          | 22          | 3.1                 |
+| 2024-08-01 | Nightingale Ward         | 10         | 27          | 2.7                 |
+| 2024-08-01 | Rainbow Ward             | 6          | 17          | 2.8                 |
+| 2024-09-01 | Acute Medical Unit (AMU) | 11         | 26          | 2.4                 |
+| 2024-09-01 | Cavell Ward              | 7          | 16          | 2.3                 |
+| 2024-09-01 | Critical Care Unit       | 4          | 10          | 2.5                 |
+| 2024-09-01 | Fleming Ward             | 9          | 23          | 2.6                 |
+| 2024-09-01 | High Dependency Unit     | 3          | 7           | 2.3                 |
+| 2024-09-01 | Jenner Ward              | 8          | 28          | 3.5                 |
+| 2024-09-01 | Lister Ward              | 10         | 26          | 2.6                 |
+| 2024-09-01 | Midwifery Unit           | 7          | 17          | 2.4                 |
+| 2024-09-01 | Nightingale Ward         | 10         | 30          | 3                   |
 | 2024-09-01 | Rainbow Ward             | 6          | 16          | 2.7                 |
-| 2024-10-01 | Acute Medical Unit (AMU) | 11         | 21          | 1.9                 |
-| 2024-10-01 | Cavell Ward              | 7          | 13          | 1.9                 |
-| 2024-10-01 | Critical Care Unit       | 4          | 19          | 4.8                 |
-| 2024-10-01 | Fleming Ward             | 9          | 16          | 1.8                 |
-| 2024-10-01 | High Dependency Unit     | 3          | 20          | 6.7                 |
-| 2024-10-01 | Jenner Ward              | 8          | 11          | 1.4                 |
-| 2024-10-01 | Lister Ward              | 10         | 16          | 1.6                 |
-| 2024-10-01 | Midwifery Unit           | 7          | 27          | 3.9                 |
-| 2024-10-01 | Nightingale Ward         | 10         | 7           | 0.7                 |
-| 2024-10-01 | Rainbow Ward             | 6          | 14          | 2.3                 |
-| 2024-11-01 | Acute Medical Unit (AMU) | 11         | 7           | 0.6                 |
-| 2024-11-01 | Cavell Ward              | 7          | 14          | 2                   |
-| 2024-11-01 | Critical Care Unit       | 4          | 17          | 4.3                 |
-| 2024-11-01 | Fleming Ward             | 9          | 17          | 1.9                 |
-| 2024-11-01 | High Dependency Unit     | 3          | 12          | 4                   |
-| 2024-11-01 | Jenner Ward              | 8          | 15          | 1.9                 |
-| 2024-11-01 | Lister Ward              | 10         | 18          | 1.8                 |
-| 2024-11-01 | Midwifery Unit           | 7          | 23          | 3.3                 |
-| 2024-11-01 | Nightingale Ward         | 10         | 15          | 1.5                 |
-| 2024-11-01 | Rainbow Ward             | 6          | 14          | 2.3                 |
-| 2024-12-01 | Acute Medical Unit (AMU) | 11         | 12          | 1.1                 |
-| 2024-12-01 | Cavell Ward              | 7          | 20          | 2.9                 |
-| 2024-12-01 | Critical Care Unit       | 4          | 17          | 4.3                 |
-| 2024-12-01 | Fleming Ward             | 9          | 14          | 1.6                 |
-| 2024-12-01 | High Dependency Unit     | 3          | 21          | 7                   |
-| 2024-12-01 | Jenner Ward              | 8          | 23          | 2.9                 |
-| 2024-12-01 | Lister Ward              | 10         | 24          | 2.4                 |
-| 2024-12-01 | Midwifery Unit           | 7          | 20          | 2.9                 |
-| 2024-12-01 | Nightingale Ward         | 10         | 18          | 1.8                 |
-| 2024-12-01 | Rainbow Ward             | 6          | 15          | 2.5                 |
-| 2025-01-01 | Acute Medical Unit (AMU) | 11         | 27          | 2.5                 |
-| 2025-01-01 | Cavell Ward              | 7          | 16          | 2.3                 |
-| 2025-01-01 | Critical Care Unit       | 4          | 20          | 5                   |
-| 2025-01-01 | Fleming Ward             | 9          | 17          | 1.9                 |
-| 2025-01-01 | High Dependency Unit     | 3          | 13          | 4.3                 |
-| 2025-01-01 | Jenner Ward              | 8          | 22          | 2.8                 |
-| 2025-01-01 | Lister Ward              | 10         | 17          | 1.7                 |
-| 2025-01-01 | Midwifery Unit           | 7          | 25          | 3.6                 |
-| 2025-01-01 | Nightingale Ward         | 10         | 19          | 1.9                 |
-| 2025-01-01 | Rainbow Ward             | 6          | 22          | 3.7                 |
-| 2025-02-01 | Acute Medical Unit (AMU) | 11         | 22          | 2                   |
-| 2025-02-01 | Cavell Ward              | 7          | 19          | 2.7                 |
-| 2025-02-01 | Critical Care Unit       | 4          | 23          | 5.8                 |
-| 2025-02-01 | Fleming Ward             | 9          | 22          | 2.4                 |
-| 2025-02-01 | High Dependency Unit     | 3          | 22          | 7.3                 |
-| 2025-02-01 | Jenner Ward              | 8          | 19          | 2.4                 |
-| 2025-02-01 | Lister Ward              | 10         | 20          | 2                   |
-| 2025-02-01 | Midwifery Unit           | 7          | 19          | 2.7                 |
-| 2025-02-01 | Nightingale Ward         | 10         | 19          | 1.9                 |
-| 2025-02-01 | Rainbow Ward             | 6          | 17          | 2.8                 |
-| 2025-03-01 | Acute Medical Unit (AMU) | 11         | 21          | 1.9                 |
-| 2025-03-01 | Cavell Ward              | 7          | 24          | 3.4                 |
-| 2025-03-01 | Critical Care Unit       | 4          | 36          | 9                   |
-| 2025-03-01 | Fleming Ward             | 9          | 18          | 2                   |
-| 2025-03-01 | High Dependency Unit     | 3          | 26          | 8.7                 |
-| 2025-03-01 | Jenner Ward              | 8          | 19          | 2.4                 |
-| 2025-03-01 | Lister Ward              | 10         | 23          | 2.3                 |
-| 2025-03-01 | Midwifery Unit           | 7          | 36          | 5.1                 |
-| 2025-03-01 | Nightingale Ward         | 10         | 16          | 1.6                 |
-| 2025-03-01 | Rainbow Ward             | 6          | 13          | 2.2                 |
-| 2025-04-01 | Acute Medical Unit (AMU) | 11         | 29          | 2.6                 |
-| 2025-04-01 | Cavell Ward              | 7          | 27          | 3.9                 |
-| 2025-04-01 | Critical Care Unit       | 4          | 16          | 4                   |
-| 2025-04-01 | Fleming Ward             | 9          | 30          | 3.3                 |
-| 2025-04-01 | High Dependency Unit     | 3          | 23          | 7.7                 |
-| 2025-04-01 | Jenner Ward              | 8          | 12          | 1.5                 |
-| 2025-04-01 | Lister Ward              | 10         | 21          | 2.1                 |
-| 2025-04-01 | Midwifery Unit           | 7          | 30          | 4.3                 |
-| 2025-04-01 | Nightingale Ward         | 10         | 28          | 2.8                 |
-| 2025-04-01 | Rainbow Ward             | 6          | 18          | 3                   |
-| 2025-05-01 | Acute Medical Unit (AMU) | 11         | 17          | 1.5                 |
-| 2025-05-01 | Cavell Ward              | 7          | 20          | 2.9                 |
-| 2025-05-01 | Critical Care Unit       | 4          | 13          | 3.3                 |
-| 2025-05-01 | Fleming Ward             | 9          | 28          | 3.1                 |
-| 2025-05-01 | High Dependency Unit     | 3          | 23          | 7.7                 |
-| 2025-05-01 | Jenner Ward              | 8          | 21          | 2.6                 |
-| 2025-05-01 | Lister Ward              | 10         | 15          | 1.5                 |
-| 2025-05-01 | Midwifery Unit           | 7          | 11          | 1.6                 |
-| 2025-05-01 | Nightingale Ward         | 10         | 27          | 2.7                 |
-| 2025-05-01 | Rainbow Ward             | 6          | 33          | 5.5                 |
-| 2025-06-01 | Acute Medical Unit (AMU) | 11         | 13          | 1.2                 |
-| 2025-06-01 | Cavell Ward              | 7          | 21          | 3                   |
-| 2025-06-01 | Critical Care Unit       | 4          | 24          | 6                   |
-| 2025-06-01 | Fleming Ward             | 9          | 15          | 1.7                 |
-| 2025-06-01 | High Dependency Unit     | 3          | 22          | 7.3                 |
-| 2025-06-01 | Jenner Ward              | 8          | 20          | 2.5                 |
-| 2025-06-01 | Lister Ward              | 10         | 20          | 2                   |
-| 2025-06-01 | Midwifery Unit           | 7          | 16          | 2.3                 |
-| 2025-06-01 | Nightingale Ward         | 10         | 18          | 1.8                 |
-| 2025-06-01 | Rainbow Ward             | 6          | 15          | 2.5                 |
-| 2025-07-01 | Acute Medical Unit (AMU) | 11         | 25          | 2.3                 |
-| 2025-07-01 | Cavell Ward              | 7          | 25          | 3.6                 |
-| 2025-07-01 | Critical Care Unit       | 4          | 15          | 3.8                 |
-| 2025-07-01 | Fleming Ward             | 9          | 27          | 3                   |
-| 2025-07-01 | High Dependency Unit     | 3          | 20          | 6.7                 |
-| 2025-07-01 | Jenner Ward              | 8          | 26          | 3.3                 |
-| 2025-07-01 | Lister Ward              | 10         | 27          | 2.7                 |
-| 2025-07-01 | Midwifery Unit           | 7          | 20          | 2.9                 |
-| 2025-07-01 | Nightingale Ward         | 10         | 28          | 2.8                 |
-| 2025-07-01 | Rainbow Ward             | 6          | 17          | 2.8                 |
-| 2025-08-01 | Acute Medical Unit (AMU) | 11         | 19          | 1.7                 |
-| 2025-08-01 | Cavell Ward              | 7          | 32          | 4.6                 |
-| 2025-08-01 | Critical Care Unit       | 4          | 22          | 5.5                 |
-| 2025-08-01 | Fleming Ward             | 9          | 27          | 3                   |
-| 2025-08-01 | High Dependency Unit     | 3          | 24          | 8                   |
-| 2025-08-01 | Jenner Ward              | 8          | 23          | 2.9                 |
-| 2025-08-01 | Lister Ward              | 10         | 19          | 1.9                 |
-| 2025-08-01 | Midwifery Unit           | 7          | 13          | 1.9                 |
-| 2025-08-01 | Nightingale Ward         | 10         | 22          | 2.2                 |
-| 2025-08-01 | Rainbow Ward             | 6          | 19          | 3.2                 |
-| 2025-09-01 | Acute Medical Unit (AMU) | 11         | 20          | 1.8                 |
-| 2025-09-01 | Cavell Ward              | 7          | 22          | 3.1                 |
-| 2025-09-01 | Critical Care Unit       | 4          | 25          | 6.3                 |
-| 2025-09-01 | Fleming Ward             | 9          | 21          | 2.3                 |
-| 2025-09-01 | High Dependency Unit     | 3          | 15          | 5                   |
-| 2025-09-01 | Jenner Ward              | 8          | 22          | 2.8                 |
-| 2025-09-01 | Lister Ward              | 10         | 20          | 2                   |
-| 2025-09-01 | Midwifery Unit           | 7          | 27          | 3.9                 |
-| 2025-09-01 | Nightingale Ward         | 10         | 28          | 2.8                 |
-| 2025-09-01 | Rainbow Ward             | 6          | 24          | 4                   |
-| 2025-10-01 | Acute Medical Unit (AMU) | 11         | 17          | 1.5                 |
-| 2025-10-01 | Cavell Ward              | 7          | 20          | 2.9                 |
-| 2025-10-01 | Critical Care Unit       | 4          | 33          | 8.3                 |
-| 2025-10-01 | Fleming Ward             | 9          | 22          | 2.4                 |
-| 2025-10-01 | High Dependency Unit     | 3          | 28          | 9.3                 |
-| 2025-10-01 | Jenner Ward              | 8          | 28          | 3.5                 |
-| 2025-10-01 | Lister Ward              | 10         | 25          | 2.5                 |
-| 2025-10-01 | Midwifery Unit           | 7          | 21          | 3                   |
-| 2025-10-01 | Nightingale Ward         | 10         | 18          | 1.8                 |
-| 2025-10-01 | Rainbow Ward             | 6          | 23          | 3.8                 |
-| 2025-11-01 | Acute Medical Unit (AMU) | 11         | 27          | 2.5                 |
-| 2025-11-01 | Cavell Ward              | 7          | 15          | 2.1                 |
-| 2025-11-01 | Critical Care Unit       | 4          | 19          | 4.8                 |
-| 2025-11-01 | Fleming Ward             | 9          | 17          | 1.9                 |
-| 2025-11-01 | High Dependency Unit     | 3          | 18          | 6                   |
-| 2025-11-01 | Jenner Ward              | 8          | 23          | 2.9                 |
-| 2025-11-01 | Lister Ward              | 10         | 13          | 1.3                 |
-| 2025-11-01 | Midwifery Unit           | 7          | 20          | 2.9                 |
-| 2025-11-01 | Nightingale Ward         | 10         | 19          | 1.9                 |
+| 2024-10-01 | Acute Medical Unit (AMU) | 11         | 30          | 2.7                 |
+| 2024-10-01 | Cavell Ward              | 7          | 19          | 2.7                 |
+| 2024-10-01 | Critical Care Unit       | 4          | 14          | 3.5                 |
+| 2024-10-01 | Fleming Ward             | 9          | 27          | 3                   |
+| 2024-10-01 | High Dependency Unit     | 3          | 6           | 2                   |
+| 2024-10-01 | Jenner Ward              | 8          | 26          | 3.3                 |
+| 2024-10-01 | Lister Ward              | 10         | 25          | 2.5                 |
+| 2024-10-01 | Midwifery Unit           | 7          | 19          | 2.7                 |
+| 2024-10-01 | Nightingale Ward         | 10         | 24          | 2.4                 |
+| 2024-10-01 | Rainbow Ward             | 6          | 13          | 2.2                 |
+| 2024-11-01 | Acute Medical Unit (AMU) | 11         | 36          | 3.3                 |
+| 2024-11-01 | Cavell Ward              | 7          | 25          | 3.6                 |
+| 2024-11-01 | Critical Care Unit       | 4          | 10          | 2.5                 |
+| 2024-11-01 | Fleming Ward             | 9          | 34          | 3.8                 |
+| 2024-11-01 | High Dependency Unit     | 3          | 6           | 2                   |
+| 2024-11-01 | Jenner Ward              | 8          | 18          | 2.3                 |
+| 2024-11-01 | Lister Ward              | 10         | 39          | 3.9                 |
+| 2024-11-01 | Midwifery Unit           | 7          | 17          | 2.4                 |
+| 2024-11-01 | Nightingale Ward         | 10         | 30          | 3                   |
+| 2024-11-01 | Rainbow Ward             | 6          | 24          | 4                   |
+| 2024-12-01 | Acute Medical Unit (AMU) | 11         | 33          | 3                   |
+| 2024-12-01 | Cavell Ward              | 7          | 18          | 2.6                 |
+| 2024-12-01 | Critical Care Unit       | 4          | 15          | 3.8                 |
+| 2024-12-01 | Fleming Ward             | 9          | 29          | 3.2                 |
+| 2024-12-01 | High Dependency Unit     | 3          | 14          | 4.7                 |
+| 2024-12-01 | Jenner Ward              | 8          | 20          | 2.5                 |
+| 2024-12-01 | Lister Ward              | 10         | 32          | 3.2                 |
+| 2024-12-01 | Midwifery Unit           | 7          | 18          | 2.6                 |
+| 2024-12-01 | Nightingale Ward         | 10         | 26          | 2.6                 |
+| 2024-12-01 | Rainbow Ward             | 6          | 18          | 3                   |
+| 2025-01-01 | Acute Medical Unit (AMU) | 11         | 33          | 3                   |
+| 2025-01-01 | Cavell Ward              | 7          | 25          | 3.6                 |
+| 2025-01-01 | Critical Care Unit       | 4          | 10          | 2.5                 |
+| 2025-01-01 | Fleming Ward             | 9          | 29          | 3.2                 |
+| 2025-01-01 | High Dependency Unit     | 3          | 14          | 4.7                 |
+| 2025-01-01 | Jenner Ward              | 8          | 32          | 4                   |
+| 2025-01-01 | Lister Ward              | 10         | 37          | 3.7                 |
+| 2025-01-01 | Midwifery Unit           | 7          | 27          | 3.9                 |
+| 2025-01-01 | Nightingale Ward         | 10         | 36          | 3.6                 |
+| 2025-01-01 | Rainbow Ward             | 6          | 21          | 3.5                 |
+| 2025-02-01 | Acute Medical Unit (AMU) | 11         | 32          | 2.9                 |
+| 2025-02-01 | Cavell Ward              | 7          | 28          | 4                   |
+| 2025-02-01 | Critical Care Unit       | 4          | 8           | 2                   |
+| 2025-02-01 | Fleming Ward             | 9          | 29          | 3.2                 |
+| 2025-02-01 | High Dependency Unit     | 3          | 9           | 3                   |
+| 2025-02-01 | Jenner Ward              | 8          | 20          | 2.5                 |
+| 2025-02-01 | Lister Ward              | 10         | 24          | 2.4                 |
+| 2025-02-01 | Midwifery Unit           | 7          | 18          | 2.6                 |
+| 2025-02-01 | Nightingale Ward         | 10         | 43          | 4.3                 |
+| 2025-02-01 | Rainbow Ward             | 6          | 16          | 2.7                 |
+| 2025-03-01 | Acute Medical Unit (AMU) | 11         | 35          | 3.2                 |
+| 2025-03-01 | Cavell Ward              | 7          | 21          | 3                   |
+| 2025-03-01 | Critical Care Unit       | 4          | 11          | 2.8                 |
+| 2025-03-01 | Fleming Ward             | 9          | 36          | 4                   |
+| 2025-03-01 | High Dependency Unit     | 3          | 11          | 3.7                 |
+| 2025-03-01 | Jenner Ward              | 8          | 24          | 3                   |
+| 2025-03-01 | Lister Ward              | 10         | 32          | 3.2                 |
+| 2025-03-01 | Midwifery Unit           | 7          | 27          | 3.9                 |
+| 2025-03-01 | Nightingale Ward         | 10         | 35          | 3.5                 |
+| 2025-03-01 | Rainbow Ward             | 6          | 19          | 3.2                 |
+| 2025-04-01 | Acute Medical Unit (AMU) | 11         | 43          | 3.9                 |
+| 2025-04-01 | Cavell Ward              | 7          | 30          | 4.3                 |
+| 2025-04-01 | Critical Care Unit       | 4          | 15          | 3.8                 |
+| 2025-04-01 | Fleming Ward             | 9          | 21          | 2.3                 |
+| 2025-04-01 | High Dependency Unit     | 3          | 14          | 4.7                 |
+| 2025-04-01 | Jenner Ward              | 8          | 26          | 3.3                 |
+| 2025-04-01 | Lister Ward              | 10         | 26          | 2.6                 |
+| 2025-04-01 | Midwifery Unit           | 7          | 22          | 3.1                 |
+| 2025-04-01 | Nightingale Ward         | 10         | 29          | 2.9                 |
+| 2025-04-01 | Rainbow Ward             | 6          | 20          | 3.3                 |
+| 2025-05-01 | Acute Medical Unit (AMU) | 11         | 43          | 3.9                 |
+| 2025-05-01 | Cavell Ward              | 7          | 30          | 4.3                 |
+| 2025-05-01 | Critical Care Unit       | 4          | 23          | 5.8                 |
+| 2025-05-01 | Fleming Ward             | 9          | 26          | 2.9                 |
+| 2025-05-01 | High Dependency Unit     | 3          | 8           | 2.7                 |
+| 2025-05-01 | Jenner Ward              | 8          | 30          | 3.8                 |
+| 2025-05-01 | Lister Ward              | 10         | 37          | 3.7                 |
+| 2025-05-01 | Midwifery Unit           | 7          | 26          | 3.7                 |
+| 2025-05-01 | Nightingale Ward         | 10         | 31          | 3.1                 |
+| 2025-05-01 | Rainbow Ward             | 6          | 22          | 3.7                 |
+| 2025-06-01 | Acute Medical Unit (AMU) | 11         | 33          | 3                   |
+| 2025-06-01 | Cavell Ward              | 7          | 19          | 2.7                 |
+| 2025-06-01 | Critical Care Unit       | 4          | 12          | 3                   |
+| 2025-06-01 | Fleming Ward             | 9          | 28          | 3.1                 |
+| 2025-06-01 | High Dependency Unit     | 3          | 8           | 2.7                 |
+| 2025-06-01 | Jenner Ward              | 8          | 23          | 2.9                 |
+| 2025-06-01 | Lister Ward              | 10         | 38          | 3.8                 |
+| 2025-06-01 | Midwifery Unit           | 7          | 20          | 2.9                 |
+| 2025-06-01 | Nightingale Ward         | 10         | 32          | 3.2                 |
+| 2025-06-01 | Rainbow Ward             | 6          | 22          | 3.7                 |
+| 2025-07-01 | Acute Medical Unit (AMU) | 11         | 35          | 3.2                 |
+| 2025-07-01 | Cavell Ward              | 7          | 16          | 2.3                 |
+| 2025-07-01 | Critical Care Unit       | 4          | 16          | 4                   |
+| 2025-07-01 | Fleming Ward             | 9          | 37          | 4.1                 |
+| 2025-07-01 | High Dependency Unit     | 3          | 13          | 4.3                 |
+| 2025-07-01 | Jenner Ward              | 8          | 27          | 3.4                 |
+| 2025-07-01 | Lister Ward              | 10         | 36          | 3.6                 |
+| 2025-07-01 | Midwifery Unit           | 7          | 25          | 3.6                 |
+| 2025-07-01 | Nightingale Ward         | 10         | 30          | 3                   |
+| 2025-07-01 | Rainbow Ward             | 6          | 23          | 3.8                 |
+| 2025-08-01 | Acute Medical Unit (AMU) | 11         | 37          | 3.4                 |
+| 2025-08-01 | Cavell Ward              | 7          | 28          | 4                   |
+| 2025-08-01 | Critical Care Unit       | 4          | 20          | 5                   |
+| 2025-08-01 | Fleming Ward             | 9          | 31          | 3.4                 |
+| 2025-08-01 | High Dependency Unit     | 3          | 13          | 4.3                 |
+| 2025-08-01 | Jenner Ward              | 8          | 28          | 3.5                 |
+| 2025-08-01 | Lister Ward              | 10         | 36          | 3.6                 |
+| 2025-08-01 | Midwifery Unit           | 7          | 26          | 3.7                 |
+| 2025-08-01 | Nightingale Ward         | 10         | 37          | 3.7                 |
+| 2025-08-01 | Rainbow Ward             | 6          | 27          | 4.5                 |
+| 2025-09-01 | Acute Medical Unit (AMU) | 11         | 44          | 4                   |
+| 2025-09-01 | Cavell Ward              | 7          | 18          | 2.6                 |
+| 2025-09-01 | Critical Care Unit       | 4          | 20          | 5                   |
+| 2025-09-01 | Fleming Ward             | 9          | 37          | 4.1                 |
+| 2025-09-01 | High Dependency Unit     | 3          | 10          | 3.3                 |
+| 2025-09-01 | Jenner Ward              | 8          | 25          | 3.1                 |
+| 2025-09-01 | Lister Ward              | 10         | 36          | 3.6                 |
+| 2025-09-01 | Midwifery Unit           | 7          | 26          | 3.7                 |
+| 2025-09-01 | Nightingale Ward         | 10         | 33          | 3.3                 |
+| 2025-09-01 | Rainbow Ward             | 6          | 10          | 1.7                 |
+| 2025-10-01 | Acute Medical Unit (AMU) | 11         | 39          | 3.5                 |
+| 2025-10-01 | Cavell Ward              | 7          | 28          | 4                   |
+| 2025-10-01 | Critical Care Unit       | 4          | 14          | 3.5                 |
+| 2025-10-01 | Fleming Ward             | 9          | 35          | 3.9                 |
+| 2025-10-01 | High Dependency Unit     | 3          | 13          | 4.3                 |
+| 2025-10-01 | Jenner Ward              | 8          | 32          | 4                   |
+| 2025-10-01 | Lister Ward              | 10         | 41          | 4.1                 |
+| 2025-10-01 | Midwifery Unit           | 7          | 25          | 3.6                 |
+| 2025-10-01 | Nightingale Ward         | 10         | 39          | 3.9                 |
+| 2025-10-01 | Rainbow Ward             | 6          | 31          | 5.2                 |
+| 2025-11-01 | Acute Medical Unit (AMU) | 11         | 48          | 4.4                 |
+| 2025-11-01 | Cavell Ward              | 7          | 27          | 3.9                 |
+| 2025-11-01 | Critical Care Unit       | 4          | 13          | 3.3                 |
+| 2025-11-01 | Fleming Ward             | 9          | 36          | 4                   |
+| 2025-11-01 | High Dependency Unit     | 3          | 8           | 2.7                 |
+| 2025-11-01 | Jenner Ward              | 8          | 37          | 4.6                 |
+| 2025-11-01 | Lister Ward              | 10         | 30          | 3                   |
+| 2025-11-01 | Midwifery Unit           | 7          | 22          | 3.1                 |
+| 2025-11-01 | Nightingale Ward         | 10         | 33          | 3.3                 |
 | 2025-11-01 | Rainbow Ward             | 6          | 23          | 3.8                 |
-| 2025-12-01 | Acute Medical Unit (AMU) | 11         | 22          | 2                   |
-| 2025-12-01 | Cavell Ward              | 7          | 35          | 5                   |
-| 2025-12-01 | Critical Care Unit       | 4          | 27          | 6.8                 |
-| 2025-12-01 | Fleming Ward             | 9          | 32          | 3.6                 |
-| 2025-12-01 | High Dependency Unit     | 3          | 24          | 8                   |
-| 2025-12-01 | Jenner Ward              | 8          | 27          | 3.4                 |
-| 2025-12-01 | Lister Ward              | 10         | 23          | 2.3                 |
-| 2025-12-01 | Midwifery Unit           | 7          | 17          | 2.4                 |
-| 2025-12-01 | Nightingale Ward         | 10         | 21          | 2.1                 |
-| 2025-12-01 | Rainbow Ward             | 6          | 13          | 2.2                 |
+| 2025-12-01 | Acute Medical Unit (AMU) | 11         | 54          | 4.9                 |
+| 2025-12-01 | Cavell Ward              | 7          | 22          | 3.1                 |
+| 2025-12-01 | Critical Care Unit       | 4          | 18          | 4.5                 |
+| 2025-12-01 | Fleming Ward             | 9          | 29          | 3.2                 |
+| 2025-12-01 | High Dependency Unit     | 3          | 13          | 4.3                 |
+| 2025-12-01 | Jenner Ward              | 8          | 36          | 4.5                 |
+| 2025-12-01 | Lister Ward              | 10         | 41          | 4.1                 |
+| 2025-12-01 | Midwifery Unit           | 7          | 18          | 2.6                 |
+| 2025-12-01 | Nightingale Ward         | 10         | 37          | 3.7                 |
+| 2025-12-01 | Rainbow Ward             | 6          | 22          | 3.7                 |
 
 
 ---
@@ -1813,21 +1800,21 @@ LIMIT 15;
 
 | patient_id  | primary_condition | total_procedure_cost | procedures_performed |
 |-------------|-------------------|----------------------|----------------------|
-| PAT_0000210 | ortho             | 38400                | 4                    |
-| PAT_0000976 | cardiac           | 31600                | 5                    |
-| PAT_0001001 | infectious        | 31500                | 3                    |
-| PAT_0005178 | infectious        | 31500                | 3                    |
-| PAT_0006273 | respiratory       | 31500                | 3                    |
-| PAT_0006579 | ortho             | 31200                | 3                    |
-| PAT_0000401 | ortho             | 29000                | 4                    |
-| PAT_0000043 | GI                | 27900                | 4                    |
-| PAT_0003260 | ortho             | 27600                | 3                    |
-| PAT_0000491 | ortho             | 27200                | 3                    |
-| PAT_0000995 | cardiac           | 26500                | 2                    |
-| PAT_0002693 | cardiac           | 26500                | 2                    |
-| PAT_0010127 | cardiac           | 26500                | 2                    |
-| PAT_0005921 | ortho             | 25500                | 3                    |
-| PAT_0001080 | ortho             | 24200                | 3                    |
+| PAT_0002873 | cardiac           | 59950                | 7                    |
+| PAT_0000334 | ortho             | 56100                | 7                    |
+| PAT_0002417 | ortho             | 51800                | 6                    |
+| PAT_0000693 | ortho             | 50700                | 6                    |
+| PAT_0000910 | ortho             | 50700                | 6                    |
+| PAT_0000323 | cardiac           | 48800                | 5                    |
+| PAT_0004096 | cardiac           | 46000                | 4                    |
+| PAT_0000373 | cardiac           | 44800                | 5                    |
+| PAT_0002040 | cardiac           | 44650                | 5                    |
+| PAT_0002060 | cardiac           | 44400                | 5                    |
+| PAT_0000012 | ortho             | 44200                | 5                    |
+| PAT_0000813 | cardiac           | 42950                | 4                    |
+| PAT_0007475 | cardiac           | 41450                | 5                    |
+| PAT_0000309 | cardiac           | 41400                | 5                    |
+| PAT_0001849 | cardiac           | 41400                | 5                    |
 
 
 ### Bed-day costs for completed spells
@@ -1868,21 +1855,21 @@ LIMIT 15;
 
 | patient_id  | los_days | avg_bed_cost_per_day | total_bed_cost |
 |-------------|----------|----------------------|----------------|
-| PAT_0006030 | 13.5     | 1800                 | 24278          |
-| PAT_0011226 | 10.8     | 1800                 | 19357          |
-| PAT_0000624 | 10.7     | 1800                 | 19207          |
-| PAT_0002385 | 10.4     | 1800                 | 18810          |
-| PAT_0010880 | 10.3     | 1800                 | 18591          |
-| PAT_0011671 | 10.1     | 1800                 | 18155          |
-| PAT_0006316 | 10.1     | 1800                 | 18142          |
-| PAT_0010725 | 9.9      | 1800                 | 17767          |
-| PAT_0008334 | 9.8      | 1800                 | 17647          |
-| PAT_0004487 | 9.8      | 1800                 | 17638          |
-| PAT_0015530 | 9.8      | 1800                 | 17609          |
-| PAT_0014279 | 9.4      | 1800                 | 16955          |
-| PAT_0007965 | 9.3      | 1800                 | 16764          |
-| PAT_0013019 | 8.9      | 1800                 | 15982          |
-| PAT_0006435 | 8.9      | 1800                 | 15943          |
+| PAT_0009405 | 17.9     | 1800                 | 32240          |
+| PAT_0004342 | 16.5     | 1800                 | 29779          |
+| PAT_0003493 | 15.3     | 1800                 | 27590          |
+| PAT_0003399 | 14.9     | 1800                 | 26898          |
+| PAT_0003168 | 14.9     | 1800                 | 26786          |
+| PAT_0005096 | 14.3     | 1800                 | 25802          |
+| PAT_0005807 | 13.6     | 1800                 | 24536          |
+| PAT_0011627 | 13.4     | 1800                 | 24101          |
+| PAT_0008140 | 13.3     | 1800                 | 23970          |
+| PAT_0008142 | 13.3     | 1800                 | 23881          |
+| PAT_0000496 | 12.9     | 1800                 | 23252          |
+| PAT_0007175 | 12.9     | 1800                 | 23176          |
+| PAT_0003408 | 12.8     | 1800                 | 23001          |
+| PAT_0014499 | 12.7     | 1800                 | 22876          |
+| PAT_0003214 | 12.5     | 1800                 | 22476          |
 
 
 ---
@@ -1916,16 +1903,16 @@ ORDER BY patient.imd_decile;
 
 | imd_decile | spells | avg_los |
 |------------|--------|---------|
-| 1          | 567    | 7.3     |
-| 2          | 522    | 7.4     |
-| 3          | 729    | 7.3     |
-| 4          | 850    | 5.3     |
-| 5          | 881    | 5.4     |
-| 6          | 767    | 5.3     |
-| 7          | 458    | 5.3     |
-| 8          | 332    | 4.3     |
-| 9          | 178    | 4.3     |
-| 10         | 119    | 4.3     |
+| 1          | 1038   | 6.6     |
+| 2          | 921    | 6.3     |
+| 3          | 1184   | 5.4     |
+| 4          | 1375   | 5.5     |
+| 5          | 1534   | 5       |
+| 6          | 1289   | 4.8     |
+| 7          | 868    | 4.4     |
+| 8          | 534    | 4.4     |
+| 9          | 316    | 4.1     |
+| 10         | 216    | 4.1     |
 
 
 ### Referral-to-attendance ratio by deprivation
@@ -1962,16 +1949,16 @@ ORDER BY patient.imd_decile;
 
 | imd_decile | referrals | attended | attendance_pct |
 |------------|-----------|----------|----------------|
-| 1          | 1191      | 460      | 38.6           |
-| 2          | 897       | 338      | 37.7           |
-| 3          | 1240      | 495      | 39.9           |
-| 4          | 1512      | 604      | 39.9           |
-| 5          | 1433      | 603      | 42.1           |
-| 6          | 1330      | 483      | 36.3           |
-| 7          | 909       | 342      | 37.6           |
-| 8          | 612       | 262      | 42.8           |
-| 9          | 291       | 115      | 39.5           |
-| 10         | 196       | 74       | 37.8           |
+| 1          | 2166      | 1418     | 65.5           |
+| 2          | 1845      | 1222     | 66.2           |
+| 3          | 2497      | 1773     | 71             |
+| 4          | 2836      | 1955     | 68.9           |
+| 5          | 2896      | 2137     | 73.8           |
+| 6          | 2437      | 1832     | 75.2           |
+| 7          | 1800      | 1383     | 76.8           |
+| 8          | 1010      | 788      | 78             |
+| 9          | 656       | 532      | 81.1           |
+| 10         | 434       | 338      | 77.9           |
 
 
 ---
@@ -2023,42 +2010,42 @@ ORDER BY monthly_ed.month;
 
 | month      | ed_arrivals | admissions | discharges | icu_events | surgeries |
 |------------|-------------|------------|------------|------------|-----------|
-| 2023-01-01 | 216         | 75         | 42         | 4          | 0         |
-| 2023-02-01 | 185         | 94         | 61         | 5          | 9         |
-| 2023-03-01 | 159         | 110        | 75         | 6          | 24        |
-| 2023-04-01 | 168         | 134        | 84         | 6          | 31        |
-| 2023-05-01 | 163         | 137        | 91         | 9          | 55        |
-| 2023-06-01 | 176         | 117        | 78         | 6          | 49        |
-| 2023-07-01 | 190         | 136        | 95         | 4          | 49        |
-| 2023-08-01 | 194         | 145        | 83         | 3          | 62        |
-| 2023-09-01 | 197         | 155        | 107        | 8          | 59        |
-| 2023-10-01 | 210         | 155        | 111        | 8          | 75        |
-| 2023-11-01 | 254         | 199        | 121        | 12         | 68        |
-| 2023-12-01 | 272         | 179        | 124        | 9          | 78        |
-| 2024-01-01 | 288         | 231        | 147        | 12         | 83        |
-| 2024-02-01 | 249         | 191        | 135        | 8          | 73        |
-| 2024-03-01 | 311         | 245        | 153        | 13         | 86        |
-| 2024-04-01 | 235         | 203        | 138        | 18         | 92        |
-| 2024-05-01 | 278         | 212        | 135        | 11         | 102       |
-| 2024-06-01 | 282         | 212        | 138        | 16         | 87        |
-| 2024-07-01 | 296         | 217        | 161        | 16         | 90        |
-| 2024-08-01 | 276         | 223        | 133        | 8          | 97        |
-| 2024-09-01 | 315         | 220        | 149        | 15         | 99        |
-| 2024-10-01 | 294         | 246        | 164        | 12         | 98        |
-| 2024-11-01 | 300         | 252        | 161        | 12         | 102       |
-| 2024-12-01 | 384         | 263        | 163        | 12         | 104       |
-| 2025-01-01 | 388         | 304        | 202        | 25         | 112       |
-| 2025-02-01 | 364         | 292        | 195        | 10         | 110       |
-| 2025-03-01 | 382         | 328        | 239        | 26         | 141       |
-| 2025-04-01 | 372         | 337        | 243        | 19         | 163       |
-| 2025-05-01 | 408         | 285        | 174        | 15         | 129       |
-| 2025-06-01 | 379         | 276        | 188        | 16         | 151       |
-| 2025-07-01 | 378         | 318        | 210        | 12         | 151       |
-| 2025-08-01 | 411         | 311        | 187        | 20         | 150       |
-| 2025-09-01 | 398         | 329        | 226        | 25         | 149       |
-| 2025-10-01 | 413         | 317        | 218        | 12         | 121       |
-| 2025-11-01 | 436         | 319        | 227        | 18         | 143       |
-| 2025-12-01 | 479         | 361        | 245        | 21         | 166       |
+| 2023-01-01 | 228         | 84         | 65         | 5          | 2         |
+| 2023-02-01 | 158         | 89         | 88         | 5          | 24        |
+| 2023-03-01 | 175         | 133        | 123        | 9          | 60        |
+| 2023-04-01 | 155         | 154        | 140        | 9          | 76        |
+| 2023-05-01 | 177         | 168        | 164        | 9          | 102       |
+| 2023-06-01 | 198         | 174        | 166        | 14         | 113       |
+| 2023-07-01 | 180         | 153        | 157        | 13         | 122       |
+| 2023-08-01 | 201         | 187        | 175        | 22         | 125       |
+| 2023-09-01 | 218         | 181        | 172        | 9          | 121       |
+| 2023-10-01 | 185         | 182        | 176        | 14         | 143       |
+| 2023-11-01 | 249         | 201        | 200        | 21         | 153       |
+| 2023-12-01 | 259         | 222        | 212        | 15         | 154       |
+| 2024-01-01 | 248         | 217        | 209        | 22         | 155       |
+| 2024-02-01 | 265         | 234        | 234        | 19         | 167       |
+| 2024-03-01 | 295         | 238        | 214        | 24         | 175       |
+| 2024-04-01 | 295         | 277        | 279        | 18         | 206       |
+| 2024-05-01 | 283         | 262        | 250        | 18         | 221       |
+| 2024-06-01 | 267         | 275        | 267        | 25         | 219       |
+| 2024-07-01 | 278         | 245        | 249        | 22         | 194       |
+| 2024-08-01 | 286         | 309        | 289        | 20         | 235       |
+| 2024-09-01 | 325         | 273        | 274        | 30         | 200       |
+| 2024-10-01 | 321         | 297        | 273        | 21         | 219       |
+| 2024-11-01 | 331         | 330        | 306        | 20         | 261       |
+| 2024-12-01 | 385         | 317        | 326        | 24         | 251       |
+| 2025-01-01 | 366         | 353        | 332        | 28         | 270       |
+| 2025-02-01 | 365         | 316        | 319        | 27         | 229       |
+| 2025-03-01 | 375         | 335        | 334        | 35         | 275       |
+| 2025-04-01 | 365         | 353        | 338        | 30         | 286       |
+| 2025-05-01 | 375         | 371        | 354        | 29         | 308       |
+| 2025-06-01 | 364         | 340        | 344        | 29         | 278       |
+| 2025-07-01 | 392         | 376        | 345        | 36         | 289       |
+| 2025-08-01 | 383         | 374        | 372        | 33         | 306       |
+| 2025-09-01 | 417         | 396        | 367        | 22         | 303       |
+| 2025-10-01 | 440         | 427        | 413        | 33         | 324       |
+| 2025-11-01 | 436         | 370        | 376        | 19         | 265       |
+| 2025-12-01 | 470         | 399        | 373        | 33         | 311       |
 
 
 ### Daily ED arrivals to spot spikes
@@ -2076,15 +2063,15 @@ LIMIT 10;
 | day        | arrivals |
 |------------|----------|
 | 2023-01-01 | 41       |
-| 2025-12-23 | 26       |
 | 2024-12-30 | 25       |
-| 2025-03-10 | 25       |
-| 2025-06-25 | 25       |
-| 2025-12-09 | 25       |
-| 2025-05-15 | 24       |
-| 2024-03-29 | 23       |
-| 2025-11-24 | 23       |
-| 2025-12-29 | 23       |
+| 2025-12-12 | 25       |
+| 2025-08-26 | 24       |
+| 2025-09-10 | 23       |
+| 2025-07-21 | 22       |
+| 2025-09-30 | 22       |
+| 2025-10-07 | 22       |
+| 2025-11-20 | 22       |
+| 2025-12-16 | 22       |
 
 
 ### Winter vs summer by year
@@ -2111,12 +2098,12 @@ ORDER BY yr, season;
 
 | yr   | season | total_ed | avg_monthly_ed |
 |------|--------|----------|----------------|
-| 2023 | summer | 1298     | 185            |
-| 2023 | winter | 1086     | 217            |
-| 2024 | summer | 1976     | 282            |
-| 2024 | winter | 1532     | 306            |
-| 2025 | summer | 2759     | 394            |
-| 2025 | winter | 2049     | 410            |
+| 2023 | summer | 1314     | 188            |
+| 2023 | winter | 1069     | 214            |
+| 2024 | summer | 2055     | 294            |
+| 2024 | winter | 1524     | 305            |
+| 2025 | summer | 2736     | 391            |
+| 2025 | winter | 2012     | 402            |
 
 
 ---
@@ -2143,11 +2130,11 @@ ORDER BY surgeries DESC;
 
 | theatre_name        | specialty                    | surgeries | per_day |
 |---------------------|------------------------------|-----------|---------|
-| Main Theatre 1      | General Surgery              | 702       | 0.7     |
-| Day Surgery Theatre | General / Mixed              | 698       | 0.7     |
-| Cardiac Theatre     | Cardiology / Cardiac Surgery | 666       | 0.6     |
-| Main Theatre 2      | Trauma & Orthopaedics        | 666       | 0.6     |
-| Obstetric Theatre   | Obstetrics                   | 626       | 0.6     |
+| Day Surgery Theatre | General / Mixed              | 2007      | 1.9     |
+| Main Theatre 1      | General Surgery              | 1533      | 1.4     |
+| Main Theatre 2      | Trauma & Orthopaedics        | 1478      | 1.4     |
+| Cardiac Theatre     | Cardiology / Cardiac Surgery | 1065      | 1       |
+| Obstetric Theatre   | Obstetrics                   | 1059      | 1       |
 
 
 ### Income by procedure complexity
@@ -2178,10 +2165,10 @@ ORDER BY total_income DESC;
 
 | complexity | surgeries | avg_tariff | total_income |
 |------------|-----------|------------|--------------|
-| complex    | 344       | 11020      | 3791000      |
-| major      | 470       | 6148       | 2889500      |
-| moderate   | 510       | 1984       | 1012000      |
-| minor      | 372       | 659        | 245150       |
+| complex    | 1517      | 11020      | 16717100     |
+| major      | 2059      | 6473       | 13327700     |
+| moderate   | 2047      | 1994       | 4081700      |
+| minor      | 1519      | 689        | 1046700      |
 
 
 ---
@@ -2207,14 +2194,17 @@ ORDER BY spells_per_patient;
 
 | spells_per_patient | patients |
 |--------------------|----------|
-| 1                  | 3810     |
-| 2                  | 1130     |
-| 3                  | 347      |
-| 4                  | 130      |
-| 5                  | 65       |
-| 6                  | 19       |
-| 7                  | 6        |
-| 8                  | 2        |
+| 1                  | 3601     |
+| 2                  | 1319     |
+| 3                  | 534      |
+| 4                  | 219      |
+| 5                  | 96       |
+| 6                  | 43       |
+| 7                  | 11       |
+| 8                  | 4        |
+| 9                  | 3        |
+| 10                 | 1        |
+| 11                 | 1        |
 
 
 ### Most complex patients (multi-pathway)
@@ -2243,21 +2233,21 @@ LIMIT 15;
 
 | patient_id  | total_episodes | pathway_types |
 |-------------|----------------|---------------|
-| PAT_0000401 | 16             | 3             |
-| PAT_0000043 | 14             | 3             |
-| PAT_0000976 | 14             | 3             |
-| PAT_0001080 | 13             | 3             |
-| PAT_0003231 | 13             | 3             |
-| PAT_0004053 | 13             | 3             |
-| PAT_0007411 | 13             | 3             |
-| PAT_0000210 | 12             | 3             |
-| PAT_0000499 | 12             | 3             |
-| PAT_0001633 | 12             | 3             |
-| PAT_0002664 | 12             | 3             |
-| PAT_0003847 | 12             | 3             |
-| PAT_0004945 | 12             | 3             |
-| PAT_0005386 | 12             | 3             |
-| PAT_0005387 | 12             | 3             |
+| PAT_0001852 | 26             | 4             |
+| PAT_0002417 | 26             | 4             |
+| PAT_0000169 | 24             | 4             |
+| PAT_0000228 | 24             | 4             |
+| PAT_0000693 | 24             | 4             |
+| PAT_0002753 | 22             | 4             |
+| PAT_0000910 | 21             | 4             |
+| PAT_0001404 | 21             | 4             |
+| PAT_0001660 | 21             | 3             |
+| PAT_0001720 | 21             | 4             |
+| PAT_0003096 | 21             | 3             |
+| PAT_0000012 | 20             | 4             |
+| PAT_0002714 | 20             | 4             |
+| PAT_0002873 | 20             | 4             |
+| PAT_0004057 | 20             | 4             |
 
 
 ### Condition profile of high-frequency patients
@@ -2285,56 +2275,54 @@ ORDER BY avg_spells DESC;
 
 | primary_condition | comorbidity_count | avg_spells | patients |
 |-------------------|-------------------|------------|----------|
-| ortho             | 4                 | 4.3333     | 12       |
-| neuro             | 0                 | 4.1667     | 12       |
-| cardiac           | 4                 | 4.1667     | 6        |
-| obstetric         | 3                 | 4.1111     | 9        |
-| ortho             | 0                 | 4          | 10       |
-| respiratory       | 6                 | 4          | 1        |
-| GI                | 8                 | 4          | 1        |
-| ortho             | 6                 | 4          | 1        |
-| infectious        | 4                 | 4          | 4        |
-| GI                | 6                 | 4          | 1        |
-| ortho             | 5                 | 4          | 2        |
-| ortho             | 1                 | 3.9091     | 22       |
-| neuro             | 4                 | 3.875      | 8        |
-| obstetric         | 2                 | 3.8571     | 7        |
-| GI                | 3                 | 3.8261     | 23       |
-| infectious        | 2                 | 3.8235     | 17       |
-| ortho             | 3                 | 3.8182     | 11       |
-| GI                | 5                 | 3.8        | 5        |
-| respiratory       | 0                 | 3.7692     | 13       |
-| respiratory       | 4                 | 3.75       | 4        |
-| cardiac           | 3                 | 3.72       | 25       |
-| obstetric         | 1                 | 3.7143     | 14       |
-| cardiac           | 1                 | 3.6857     | 35       |
-| infectious        | 3                 | 3.6667     | 6        |
-| infectious        | 0                 | 3.6667     | 9        |
-| neuro             | 5                 | 3.6667     | 3        |
-| respiratory       | 3                 | 3.6        | 10       |
-| ortho             | 2                 | 3.5556     | 18       |
-| neuro             | 3                 | 3.5385     | 13       |
-| GI                | 2                 | 3.5263     | 19       |
-| GI                | 0                 | 3.5        | 12       |
-| obstetric         | 4                 | 3.5        | 4        |
-| GI                | 1                 | 3.4783     | 23       |
-| neuro             | 1                 | 3.4737     | 19       |
-| neuro             | 2                 | 3.4643     | 28       |
-| GI                | 4                 | 3.4        | 10       |
-| cardiac           | 2                 | 3.3929     | 28       |
-| respiratory       | 2                 | 3.3793     | 29       |
-| obstetric         | 0                 | 3.3636     | 11       |
-| infectious        | 1                 | 3.35       | 20       |
-| respiratory       | 1                 | 3.3448     | 29       |
-| infectious        | 5                 | 3.3333     | 3        |
-| cardiac           | 0                 | 3.2778     | 18       |
-| cardiac           | 5                 | 3.25       | 4        |
-| respiratory       | 5                 | 3          | 3        |
+| infectious        | 5                 | 5.5        | 2        |
+| GI                | 4                 | 4.4545     | 11       |
+| GI                | 3                 | 4.4545     | 22       |
+| cardiac           | 6                 | 4.3333     | 3        |
+| GI                | 5                 | 4.25       | 4        |
+| ortho             | 5                 | 4.25       | 4        |
+| neuro             | 2                 | 4.0732     | 41       |
+| cardiac           | 3                 | 4.0323     | 31       |
+| obstetric         | 5                 | 4          | 6        |
+| ortho             | 0                 | 3.92       | 25       |
+| infectious        | 2                 | 3.8889     | 27       |
+| respiratory       | 2                 | 3.881      | 42       |
+| cardiac           | 4                 | 3.8667     | 15       |
+| infectious        | 0                 | 3.8        | 15       |
+| ortho             | 1                 | 3.7959     | 49       |
+| neuro             | 5                 | 3.75       | 4        |
+| neuro             | 0                 | 3.7273     | 11       |
+| respiratory       | 1                 | 3.6981     | 53       |
+| respiratory       | 0                 | 3.6957     | 23       |
+| GI                | 1                 | 3.68       | 25       |
+| cardiac           | 0                 | 3.6667     | 36       |
+| neuro             | 3                 | 3.6667     | 18       |
+| respiratory       | 5                 | 3.6667     | 6        |
+| respiratory       | 4                 | 3.6471     | 17       |
+| ortho             | 2                 | 3.625      | 48       |
+| cardiac           | 1                 | 3.6119     | 67       |
+| infectious        | 3                 | 3.6        | 15       |
+| obstetric         | 0                 | 3.5714     | 14       |
+| respiratory       | 3                 | 3.5714     | 21       |
+| ortho             | 3                 | 3.5652     | 23       |
+| GI                | 0                 | 3.5625     | 16       |
+| neuro             | 4                 | 3.5455     | 11       |
+| cardiac           | 2                 | 3.5217     | 46       |
+| GI                | 2                 | 3.5135     | 37       |
+| obstetric         | 3                 | 3.4286     | 7        |
+| ortho             | 4                 | 3.4        | 15       |
+| obstetric         | 2                 | 3.4        | 15       |
+| obstetric         | 4                 | 3.3333     | 3        |
+| respiratory       | 6                 | 3.3333     | 3        |
+| neuro             | 1                 | 3.2812     | 32       |
+| infectious        | 1                 | 3.2778     | 18       |
+| infectious        | 4                 | 3.25       | 8        |
+| obstetric         | 1                 | 3.2308     | 13       |
+| cardiac           | 5                 | 3.1667     | 6        |
+| neuro             | 6                 | 3          | 1        |
 | infectious        | 6                 | 3          | 1        |
-| neuro             | 6                 | 3          | 2        |
-| cardiac           | 6                 | 3          | 1        |
-| obstetric         | 5                 | 3          | 2        |
-| GI                | 7                 | 3          | 1        |
+| neuro             | 7                 | 3          | 1        |
+| cardiac           | 8                 | 3          | 1        |
 
 
 ---
@@ -2358,18 +2346,18 @@ ORDER BY quarter;
 
 | quarter    | assessed | pct_within_4h |
 |------------|----------|---------------|
-| 2023-01-01 | 532      | 82.9          |
-| 2023-04-01 | 486      | 85.4          |
-| 2023-07-01 | 547      | 81.5          |
-| 2023-10-01 | 700      | 83.7          |
-| 2024-01-01 | 810      | 84.4          |
-| 2024-04-01 | 743      | 83            |
-| 2024-07-01 | 846      | 83.8          |
-| 2024-10-01 | 942      | 83.7          |
-| 2025-01-01 | 1071     | 83.8          |
-| 2025-04-01 | 1108     | 84            |
-| 2025-07-01 | 1125     | 84.9          |
-| 2025-10-01 | 1264     | 85.8          |
+| 2023-01-01 | 532      | 84.2          |
+| 2023-04-01 | 513      | 83            |
+| 2023-07-01 | 573      | 83.2          |
+| 2023-10-01 | 659      | 83.5          |
+| 2024-01-01 | 757      | 83.4          |
+| 2024-04-01 | 802      | 86.4          |
+| 2024-07-01 | 843      | 84.5          |
+| 2024-10-01 | 989      | 85.7          |
+| 2025-01-01 | 1040     | 82.6          |
+| 2025-04-01 | 1042     | 86.8          |
+| 2025-07-01 | 1131     | 85            |
+| 2025-10-01 | 1270     | 83.7          |
 
 
 ### Cancer 28-day FDS by quarter
@@ -2397,18 +2385,18 @@ ORDER BY quarter;
 
 | quarter    | pathways | pct_fds |
 |------------|----------|---------|
-| 2023-01-01 | 36       | 97.2    |
-| 2023-04-01 | 40       | 100     |
-| 2023-07-01 | 37       | 100     |
-| 2023-10-01 | 37       | 94.6    |
-| 2024-01-01 | 62       | 96.8    |
-| 2024-04-01 | 50       | 94      |
-| 2024-07-01 | 54       | 94.4    |
-| 2024-10-01 | 80       | 100     |
-| 2025-01-01 | 85       | 97.6    |
-| 2025-04-01 | 67       | 92.5    |
-| 2025-07-01 | 81       | 97.5    |
-| 2025-10-01 | 97       | 99      |
+| 2023-01-01 | 142      | 69      |
+| 2023-04-01 | 134      | 76.1    |
+| 2023-07-01 | 145      | 75.2    |
+| 2023-10-01 | 184      | 79.3    |
+| 2024-01-01 | 228      | 78.5    |
+| 2024-04-01 | 222      | 72.5    |
+| 2024-07-01 | 240      | 72.9    |
+| 2024-10-01 | 300      | 77.3    |
+| 2025-01-01 | 308      | 73.4    |
+| 2025-04-01 | 305      | 75.7    |
+| 2025-07-01 | 321      | 77.3    |
+| 2025-10-01 | 267      | 88      |
 
 
 ### Diagnostic 6-week compliance by quarter
@@ -2436,18 +2424,18 @@ ORDER BY quarter;
 
 | quarter    | tests_completed | pct_within_6wk |
 |------------|-----------------|----------------|
-| 2023-01-01 | 34              | 100            |
-| 2023-04-01 | 60              | 98.3           |
-| 2023-07-01 | 79              | 97.5           |
-| 2023-10-01 | 75              | 98.7           |
-| 2024-01-01 | 107             | 98.1           |
-| 2024-04-01 | 138             | 93.5           |
-| 2024-07-01 | 130             | 96.9           |
-| 2024-10-01 | 140             | 94.3           |
-| 2025-01-01 | 144             | 95.1           |
-| 2025-04-01 | 179             | 98.3           |
-| 2025-07-01 | 140             | 98.6           |
-| 2025-10-01 | 145             | 97.9           |
+| 2023-01-01 | 115             | 96.5           |
+| 2023-04-01 | 239             | 97.9           |
+| 2023-07-01 | 297             | 94.3           |
+| 2023-10-01 | 367             | 95.6           |
+| 2024-01-01 | 472             | 94.3           |
+| 2024-04-01 | 502             | 96.6           |
+| 2024-07-01 | 537             | 95.5           |
+| 2024-10-01 | 608             | 95.6           |
+| 2025-01-01 | 649             | 92.1           |
+| 2025-04-01 | 795             | 94.2           |
+| 2025-07-01 | 747             | 93.3           |
+| 2025-10-01 | 698             | 98.3           |
 
 
 ---
@@ -2494,9 +2482,9 @@ ORDER BY activity_year;
 
 | activity_year | patients_active |
 |---------------|-----------------|
-| 2023          | 4575            |
-| 2024          | 2345            |
-| 2025          | 2162            |
+| 2023          | 5349            |
+| 2024          | 3399            |
+| 2025          | 3004            |
 
 
 ---
