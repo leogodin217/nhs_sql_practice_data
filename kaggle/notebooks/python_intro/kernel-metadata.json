@@ -1,0 +1,17 @@
+{
+  "id": "leogodin/millbrook-nhs-python-intro",
+  "title": "Millbrook NHS \u2014 Python Intro (pandas / seaborn / scipy)",
+  "code_file": "python_intro.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": false,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [
+    "leogodin/millbrook-nhs-acute-care-warehouse"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

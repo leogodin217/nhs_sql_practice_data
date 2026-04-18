@@ -1,0 +1,466 @@
+{
+  "title": "Millbrook NHS Trust \u2014 A Synthetic Acute Care Data Warehouse",
+  "id": "leogodin/millbrook-nhs-acute-care-warehouse",
+  "licenses": [
+    {
+      "name": "CC-BY-SA-4.0"
+    }
+  ],
+  "keywords": [
+    "healthcare",
+    "nhs",
+    "sql",
+    "duckdb",
+    "synthetic",
+    "data-warehouse",
+    "dimensional-model",
+    "acute-care",
+    "hospital",
+    "pandas"
+  ],
+  "resources": [
+    {
+      "path": "dim_patient.csv",
+      "description": "Patient demographics, clinical flags, and tracked activity counters. Uses Type-2 Slowly Changing Dimensions: a new row is written each time a tracked attribute changes, with valid_from / valid_to bracketing the version's lifetime.",
+      "schema": {
+        "fields": [
+          {"name": "id", "description": "Synthetic patient identifier (e.g. PAT_0000066). Stable across SCD versions.", "type": "string"},
+          {"name": "name", "description": "Synthetic patient name. Not used analytically.", "type": "string"},
+          {"name": "person_gender_code", "description": "NHS Data Dictionary gender code (integer). 1 = male, 2 = female, 9 = not specified (typical NHS convention).", "type": "numeric"},
+          {"name": "ethnic_category", "description": "NHS ethnic category code (A\u2013Z range).", "type": "string"},
+          {"name": "imd_decile", "description": "Index of Multiple Deprivation decile for the patient's lower-layer super output area. 1 = most deprived, 10 = least deprived.", "type": "numeric"},
+          {"name": "primary_condition", "description": "Broad clinical grouping that drives a patient's expected pathway (e.g. respiratory, cardiac, gastrointestinal).", "type": "string"},
+          {"name": "comorbidity_count", "description": "Count of significant comorbid conditions. Used in readmission and LOS stratification.", "type": "numeric"},
+          {"name": "frailty_score", "description": "Ordinal frailty score. Higher = frailer.", "type": "numeric"},
+          {"name": "gp_practice_code", "description": "Referring GP practice code.", "type": "string"},
+          {"name": "pathway_type", "description": "Dominant care pathway for the patient (elective, emergency, cancer, etc.).", "type": "string"},
+          {"name": "clinician_requirement", "description": "Clinician skill level required by the patient's primary condition. Currently constant at consultant in the data.", "type": "string"},
+          {"name": "status", "description": "Patient lifecycle status (active, admitted, discharged, deceased). Changes drive new SCD rows.", "type": "string"},
+          {"name": "admission_count", "description": "Running count of inpatient admissions for the patient at the time the version was written.", "type": "numeric"},
+          {"name": "total_spell_tariff", "description": "Running sum of spell tariffs (\u00a3) across the patient's completed spells at the time the version was written. Currently 0.0 for every row.", "type": "numeric"},
+          {"name": "surgical_referred", "description": "Whether the patient has ever been referred for surgery.", "type": "boolean"},
+          {"name": "cancer_referred", "description": "Whether the patient has ever been referred on a cancer pathway.", "type": "boolean"},
+          {"name": "valid_from", "description": "SCD-2 version start timestamp (inclusive).", "type": "datetime"},
+          {"name": "valid_to", "description": "SCD-2 version end timestamp (exclusive). NULL for the current version.", "type": "datetime"},
+          {"name": "active", "description": "Whether the patient is an active patient of the trust as of the version's valid window.", "type": "boolean"}
+        ]
+      }
+    },
+    {
+      "path": "dim_consultant.csv",
+      "description": "Consultant workforce \u2014 25 consultants spread across 5 specialty groups, with grade, capacity, and quality attributes. SCD-2 capable but the supplied data contains a single current version per consultant.",
+      "schema": {
+        "fields": [
+          {"name": "id", "description": "Synthetic consultant identifier (e.g. CON_012).", "type": "string"},
+          {"name": "consultant_code", "description": "External consultant code used in NHS reporting.", "type": "string"},
+          {"name": "main_specialty", "description": "NHS main specialty code (integer, e.g. 110 = gastroenterology).", "type": "numeric"},
+          {"name": "grade", "description": "Clinical grade: consultant, registrar, or SHO.", "type": "string"},
+          {"name": "quality_rating", "description": "Internal quality rating (0.0\u20131.0).", "type": "numeric"},
+          {"name": "session_count", "description": "Contracted sessions per week.", "type": "numeric"},
+          {"name": "capacity_strain", "description": "Ratio of demand to capacity. Higher = more stretched.", "type": "numeric"},
+          {"name": "specialty_group", "description": "Broad specialty grouping: cardiac, respiratory, gastrointestinal, general, musculoskeletal.", "type": "string"},
+          {"name": "valid_from", "description": "SCD-2 version start timestamp.", "type": "datetime"},
+          {"name": "valid_to", "description": "SCD-2 version end. Empty string for the current version.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "dim_ward.csv",
+      "description": "Hospital wards with capacity, department, and bed-day cost. 10 wards totalling 75 beds across two sites.",
+      "schema": {
+        "fields": [
+          {"name": "id", "description": "Synthetic ward identifier (e.g. WARD_001).", "type": "string"},
+          {"name": "ward_name", "description": "Human-readable ward name (e.g. Jenner Ward, High Dependency Unit).", "type": "string"},
+          {"name": "ward_type", "description": "Operational type: general, assessment, step_down, icu_hdu, maternity, paediatric.", "type": "string"},
+          {"name": "department", "description": "Owning department: medicine, surgery, critical_care, women_children.", "type": "string"},
+          {"name": "site_code", "description": "Hospital site code (RXH01 or RXH02).", "type": "string"},
+          {"name": "total_beds", "description": "Number of beds on the ward.", "type": "numeric"},
+          {"name": "cost_per_bed_day", "description": "Daily cost per occupied bed (\u00a3). Used for spell cost analysis.", "type": "numeric"},
+          {"name": "valid_from", "description": "SCD-2 version start timestamp.", "type": "datetime"},
+          {"name": "valid_to", "description": "SCD-2 version end. Empty string for the current version.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "dim_procedure.csv",
+      "description": "Surgical procedure catalogue with OPCS-4 clinical codes, HRG payment codes, complexity tier, and tariff. Drives procedure cost and surgical income analyses.",
+      "schema": {
+        "fields": [
+          {"name": "id", "description": "Synthetic procedure identifier (e.g. PROC_011).", "type": "string"},
+          {"name": "procedure_name", "description": "Procedure name (e.g. Lung resection, Spinal decompression).", "type": "string"},
+          {"name": "opcs4_code", "description": "OPCS-4.10 clinical procedure code.", "type": "string"},
+          {"name": "hrg_code", "description": "Healthcare Resource Group code that drives NHS payment.", "type": "string"},
+          {"name": "tariff", "description": "Payment tariff (\u00a3) per case.", "type": "numeric"},
+          {"name": "complexity", "description": "Complexity tier: minor, moderate, major, complex.", "type": "string"},
+          {"name": "specialty_group", "description": "Specialty that typically performs the procedure.", "type": "string"},
+          {"name": "valid_from", "description": "SCD-2 version start timestamp.", "type": "datetime"},
+          {"name": "valid_to", "description": "SCD-2 version end. Empty string for the current version.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "dim_medication.csv",
+      "description": "Medication catalogue keyed by synthetic medication ID, categorised using the British National Formulary (BNF) hierarchy.",
+      "schema": {
+        "fields": [
+          {"name": "id", "description": "Synthetic medication identifier (e.g. MED_011).", "type": "string"},
+          {"name": "medication_name", "description": "Drug name (e.g. Amiodarone, Enoxaparin).", "type": "string"},
+          {"name": "bnf_category", "description": "BNF chapter/section label (e.g. 4.8.1 Control of epilepsy).", "type": "string"},
+          {"name": "route", "description": "Administration route: oral, iv, inhaled, sc.", "type": "string"},
+          {"name": "daily_cost", "description": "Daily medication cost (\u00a3) at the standard dose.", "type": "numeric"},
+          {"name": "specialty_group", "description": "Specialty most likely to prescribe the medication.", "type": "string"},
+          {"name": "valid_from", "description": "SCD-2 version start timestamp.", "type": "datetime"},
+          {"name": "valid_to", "description": "SCD-2 version end. Empty string for the current version.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "dim_diagnostic.csv",
+      "description": "Diagnostic test catalogue (imaging, pathology, cardiology) with cost and expected turnaround. Used with DM01 6-week wait analysis.",
+      "schema": {
+        "fields": [
+          {"name": "id", "description": "Synthetic diagnostic test identifier (e.g. DIAG_004).", "type": "string"},
+          {"name": "test_name", "description": "Test name (e.g. Ultrasound, Full Blood Count, MRI Scan).", "type": "string"},
+          {"name": "test_type", "description": "Modality: blood, pathology, xray, ct, mri, ultrasound, cardiology, other.", "type": "string"},
+          {"name": "cost", "description": "Unit cost per test (\u00a3).", "type": "numeric"},
+          {"name": "turnaround_days", "description": "Expected days from order to result.", "type": "numeric"},
+          {"name": "valid_from", "description": "SCD-2 version start timestamp.", "type": "datetime"},
+          {"name": "valid_to", "description": "SCD-2 version end. Empty string for the current version.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "dim_theatre.csv",
+      "description": "Operating theatres and their scheduling capacity. 5 theatres covering general surgery, cardiac, orthopaedic, and obstetric use.",
+      "schema": {
+        "fields": [
+          {"name": "id", "description": "Synthetic theatre identifier (e.g. THTR_001).", "type": "string"},
+          {"name": "theatre_name", "description": "Theatre name (e.g. Cardiac Theatre, Main Theatre 2).", "type": "string"},
+          {"name": "specialty", "description": "Primary specialty served by the theatre.", "type": "string"},
+          {"name": "sessions_per_day", "description": "Scheduled surgical sessions per operational day (2\u20134).", "type": "numeric"},
+          {"name": "valid_from", "description": "SCD-2 version start timestamp.", "type": "datetime"},
+          {"name": "valid_to", "description": "SCD-2 version end. Empty string for the current version.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_ed_arrival.csv",
+      "description": "Emergency Department arrival events. The first event in an A&E attendance \u2014 records when a patient presents at A&E and is registered. Subsequent events in the same attendance (triage, clinical assessment) share the attendance_id.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic monotonic event identifier across all fact tables. Useful for ordering events.", "type": "numeric"},
+          {"name": "timestamp", "description": "Event timestamp. Day-of-week shows the classic Monday-peak pattern in A&E.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "consultant_id", "description": "Consultant who registered the arrival (typically the receiving clinician) (\u2192 dim_consultant.id).", "type": "string"},
+          {"name": "attendance_id", "description": "Attendance identifier unique to this A&E visit. Links arrival, triage, and assessment rows for the same attendance.", "type": "string"},
+          {"name": "state", "description": "State label. Constant arrival in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_triage.csv",
+      "description": "Triage assessment event within an A&E attendance. Carries the Manchester-style triage category (1\u20135) that drives clinical priority.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Triage event timestamp.", "type": "datetime"},
+          {"name": "triage_category", "description": "Triage category 1 (immediate / resuscitation) through 5 (non-urgent).", "type": "numeric"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "consultant_id", "description": "Clinician performing triage (\u2192 dim_consultant.id).", "type": "string"},
+          {"name": "attendance_id", "description": "A&E attendance identifier. Matches the arrival row in fact_ed_arrival.", "type": "string"},
+          {"name": "state", "description": "State label. Constant triage in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_ed_assessment.csv",
+      "description": "Clinical assessment event, performed after triage. Carries wait_minutes \u2014 the elapsed time from arrival to this assessment \u2014 used as the operational proxy for the 4-hour A&E standard.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Assessment event timestamp.", "type": "datetime"},
+          {"name": "wait_minutes", "description": "Minutes from arrival to clinical assessment. Proxy for the 4-hour standard (which officially measures arrival-to-departure).", "type": "numeric"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "consultant_id", "description": "Assessing clinician (\u2192 dim_consultant.id).", "type": "string"},
+          {"name": "attendance_id", "description": "A&E attendance identifier. Matches the arrival and triage rows.", "type": "string"},
+          {"name": "state", "description": "State label. Constant assessment in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_admission.csv",
+      "description": "Inpatient admission events. A spell_id can have multiple rows here, capturing sub-events in the admission process. For length-of-stay work use the earliest timestamp per spell_id as the admission time.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Event timestamp. Use MIN(timestamp) per spell_id to get the admission time.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "consultant_id", "description": "Admitting consultant (\u2192 dim_consultant.id).", "type": "string"},
+          {"name": "spell_id", "description": "Inpatient spell identifier. Links admission, ward assignments, medication, ICU care, and discharge for the same stay.", "type": "string"},
+          {"name": "state", "description": "State label for the event.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_ward_assignment.csv",
+      "description": "Ward and bed assignments during a spell. A spell can have multiple rows as patients transfer between wards or beds.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time the patient was assigned to this ward/bed.", "type": "datetime"},
+          {"name": "bed_number", "description": "Bed number within the ward (1\u201330).", "type": "numeric"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "ward_id", "description": "Ward the patient was assigned to (\u2192 dim_ward.id).", "type": "string"},
+          {"name": "spell_id", "description": "Inpatient spell identifier. Matches fact_admission.", "type": "string"},
+          {"name": "state", "description": "State label. Constant admission_ward in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_medication_administered.csv",
+      "description": "Medication administration events during an inpatient spell. One row per dose given, linked to the medication catalogue via medication_id.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time the dose was administered.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "medication_id", "description": "Medication administered (\u2192 dim_medication.id).", "type": "string"},
+          {"name": "spell_id", "description": "Inpatient spell during which the dose was given.", "type": "string"},
+          {"name": "state", "description": "State label. Constant specialty_care in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_icu_care.csv",
+      "description": "ICU / HDU escalation events during an inpatient spell. Marks a transfer into critical care for patients who deteriorate on a general ward.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time of escalation to critical care.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "ward_id", "description": "Critical care or HDU ward (\u2192 dim_ward.id).", "type": "string"},
+          {"name": "spell_id", "description": "Inpatient spell during which the escalation occurred.", "type": "string"},
+          {"name": "state", "description": "State label. Constant icu_hdu in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_discharge.csv",
+      "description": "Inpatient discharge events. Records the end of an inpatient spell \u2014 patient discharged home, to another provider, or deceased. The earliest timestamp per spell_id is the discharge time.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Discharge event timestamp. Use MIN(timestamp) per spell_id for the discharge time.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "consultant_id", "description": "Discharging consultant (\u2192 dim_consultant.id).", "type": "string"},
+          {"name": "spell_id", "description": "Inpatient spell identifier. Always matches a spell_id in fact_admission.", "type": "string"},
+          {"name": "state", "description": "Discharge state (discharged in current data).", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_dtoc_assessment.csv",
+      "description": "Delayed Transfer of Care (DTOC) assessments. Marks the moment a patient is declared medically fit for discharge. The gap between this timestamp and the matching fact_discharge.timestamp is the DTOC delay.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time the patient was declared medically fit for discharge.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "ward_id", "description": "Ward the patient is in at the time of assessment (\u2192 dim_ward.id).", "type": "string"},
+          {"name": "spell_id", "description": "Inpatient spell. Matches fact_admission / fact_discharge.", "type": "string"},
+          {"name": "state", "description": "State label. Constant medically_fit in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_referral_created.csv",
+      "description": "Outpatient referrals received by the trust \u2014 typically from a GP. First event on a referral-to-treatment pathway, keyed by pathway_id.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time the referral was received.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "consultant_id", "description": "Consultant the referral is addressed to (\u2192 dim_consultant.id).", "type": "string"},
+          {"name": "pathway_id", "description": "Outpatient pathway identifier. Unique per referral, shared with subsequent appointments in fact_appointment_attended.", "type": "string"},
+          {"name": "state", "description": "State label. Constant referral_received in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_appointment_attended.csv",
+      "description": "Attended outpatient appointments. Linked to the originating referral via pathway_id. A single pathway can have multiple attended appointments (review, follow-up, etc.).",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Appointment attendance time.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "consultant_id", "description": "Consultant who saw the patient (\u2192 dim_consultant.id).", "type": "string"},
+          {"name": "pathway_id", "description": "Outpatient pathway identifier. Matches fact_referral_created.", "type": "string"},
+          {"name": "state", "description": "State label. Constant attended in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_pre_op_assessment.csv",
+      "description": "Pre-operative assessment. First event on a surgical episode \u2014 links the patient to the planned procedure and opens the surgical_episode_id that joins the later surgeon-assignment and surgery-performed events.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Pre-op assessment time.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "procedure_id", "description": "Planned procedure (\u2192 dim_procedure.id).", "type": "string"},
+          {"name": "surgical_episode_id", "description": "Surgical episode identifier. Links pre-op, surgeon assignment, and surgery performed.", "type": "string"},
+          {"name": "state", "description": "State label. Constant pre_op_procedure in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_surgeon_assigned.csv",
+      "description": "Surgeon assignment to a surgical episode, after the pre-op assessment. Only consultants of surgical grade appear as the assigned consultant.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time the surgeon was assigned.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "consultant_id", "description": "Assigned surgeon (\u2192 dim_consultant.id).", "type": "string"},
+          {"name": "surgical_episode_id", "description": "Surgical episode identifier. Matches the pre-op assessment row.", "type": "string"},
+          {"name": "state", "description": "State label. Constant pre_op_surgeon in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_surgery_performed.csv",
+      "description": "Completed surgery event. Carries the theatre it was performed in. Use with fact_pre_op_assessment (via surgical_episode_id) to recover the procedure and its tariff for surgical-income analyses.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time the surgery completed.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "theatre_id", "description": "Theatre in which the surgery was performed (\u2192 dim_theatre.id).", "type": "string"},
+          {"name": "surgical_episode_id", "description": "Surgical episode identifier. Matches the pre-op assessment row.", "type": "string"},
+          {"name": "state", "description": "State label. Constant surgery_performed in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_cancer_referral.csv",
+      "description": "Cancer pathway referral. Start of the 28-day Faster Diagnosis Standard (FDS) clock. Paired with fact_cancer_first_seen via cancer_pathway_id to measure days from referral to first consultant appointment.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time the cancer referral was received. FDS clock start.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "consultant_id", "description": "Receiving consultant (\u2192 dim_consultant.id).", "type": "string"},
+          {"name": "cancer_pathway_id", "description": "Cancer pathway identifier. Matches fact_cancer_first_seen.", "type": "string"},
+          {"name": "state", "description": "State label. Constant referral_received in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_cancer_first_seen.csv",
+      "description": "First consultant appointment on a cancer pathway. FDS clock stop event. Not every referral has a first-seen row within the reporting window \u2014 right-censored cases remain open at the cutoff.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time of the first appointment. FDS clock stop.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "consultant_id", "description": "Consultant who saw the patient (\u2192 dim_consultant.id).", "type": "string"},
+          {"name": "cancer_pathway_id", "description": "Cancer pathway identifier. Matches fact_cancer_referral.", "type": "string"},
+          {"name": "state", "description": "State label. Constant first_seen in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_diagnostic_ordered.csv",
+      "description": "Diagnostic test order event. Paired with fact_diagnostic_performed via request_id to measure turnaround and DM01 6-week compliance.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Order time. DM01 clock start.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "diagnostic_id", "description": "Test ordered (\u2192 dim_diagnostic.id).", "type": "string"},
+          {"name": "request_id", "description": "Request identifier. Matches the performed row.", "type": "string"},
+          {"name": "state", "description": "State label. Constant ordered in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_diagnostic_performed.csv",
+      "description": "Completed diagnostic test event. Match to fact_diagnostic_ordered on request_id to compute time-to-test. Not every order has a matching performed row within the window.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time the test was performed. DM01 clock stop.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "diagnostic_id", "description": "Test performed (\u2192 dim_diagnostic.id).", "type": "string"},
+          {"name": "request_id", "description": "Request identifier. Matches fact_diagnostic_ordered.", "type": "string"},
+          {"name": "state", "description": "State label. Constant performed in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_fft_response.csv",
+      "description": "Friends and Family Test survey responses. Each row is a single patient's rating on the standard NHS FFT 1\u20135 recommendation scale.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time the response was submitted.", "type": "datetime"},
+          {"name": "recommendation_score", "description": "NHS FFT score (1\u20135). Convention varies by survey; check the distribution before interpreting direction.", "type": "numeric"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient identifier (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "consultant_id", "description": "Consultant associated with the care episode being rated (\u2192 dim_consultant.id).", "type": "string"},
+          {"name": "survey_id", "description": "Survey response identifier.", "type": "string"},
+          {"name": "state", "description": "State label. Constant responded in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_safety_incident.csv",
+      "description": "Patient safety incidents reported on a ward during a spell. Low-volume table, useful for incident-rate analyses against ward-days.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time the incident was reported.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Patient involved in the incident (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "ward_id", "description": "Ward on which the incident occurred (\u2192 dim_ward.id).", "type": "string"},
+          {"name": "spell_id", "description": "Inpatient spell during which the incident occurred.", "type": "string"},
+          {"name": "state", "description": "State label. Constant incident in current data.", "type": "string"}
+        ]
+      }
+    },
+    {
+      "path": "fact_death_record.csv",
+      "description": "In-hospital death record. Linked to the spell the patient was in at time of death. Used for crude mortality rate and HSMR context.",
+      "schema": {
+        "fields": [
+          {"name": "decision_id", "description": "Synthetic event identifier.", "type": "numeric"},
+          {"name": "timestamp", "description": "Time of death.", "type": "datetime"},
+          {"name": "event_sequence", "description": "Per-patient event sequence counter.", "type": "numeric"},
+          {"name": "patient_id", "description": "Deceased patient (\u2192 dim_patient.id).", "type": "string"},
+          {"name": "consultant_id", "description": "Consultant of record at time of death (\u2192 dim_consultant.id).", "type": "string"},
+          {"name": "spell_id", "description": "Inpatient spell during which the death occurred.", "type": "string"},
+          {"name": "state", "description": "State label. Constant deceased in current data.", "type": "string"}
+        ]
+      }
+    }
+  ]
+}
