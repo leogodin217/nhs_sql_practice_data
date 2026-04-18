@@ -186,8 +186,6 @@ The dataset is calibrated to produce operationally meaningful results for the fo
 
 Note on the 4-hour standard: the data does not include an ED departure event, so time-to-assessment is used as a proxy.
 
-See [project/metric_definitions.md](project/metric_definitions.md) for full definitions, targets, and calculation details per metric.
-
 ## Use of AI
 
 I use LLMs every day. At work. At home. AI is integrated in my workflows and this project is no different. This is how I build these types of practice exercises. 
