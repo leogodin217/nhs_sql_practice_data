@@ -89,6 +89,8 @@ SELECT * FROM nhsdb.main.dim_patient LIMIT 10;
 
 ## Dataset
 
+Column-level reference for every table, with live stats (null %, distinct counts, ranges, sample values), is in [`docs/data_dictionary/index.md`](docs/data_dictionary/index.md). Regenerate it with `python scripts/gen_data_dictionary.py` after rebuilding the CSVs.
+
 ### Patient Dimension
 
 | Table | Rows | Description |
@@ -162,21 +164,41 @@ SELECT * FROM nhsdb.main.dim_patient LIMIT 10;
 | `fact_safety_incident` | 272 | Safety incidents |
 | `fact_death_record` | 233 | In-hospital deaths |
 
-16,364 distinct patients across 3 years (2023-2025). Generated with [Fabulexa](https://github.com/leogodin217/fabulexa_sim) (a configurable synthetic data generator).
+16,364 distinct patients across 3 years (2023-2025). Generated with Fabulexa (A generalized synthetic data generator)
 
-A 27th table (`fact_journey_states`) is available as a CSV in `data/` but not loaded into the database. It contains detailed state-by-state patient pathway data. Advanced users can load it manually for richer temporal analysis.
+
+## NHS Metrics
+
+The dataset is calibrated to produce operationally meaningful results for the following NHS performance and quality measures:
+
+**Access and performance targets**
+
+- [A&E 4-hour standard](https://www.england.nhs.uk/statistics/statistical-work-areas/ae-waiting-times-and-activity/) (target: 78% by March 2026, 95% constitutional)
+- [Cancer 28-day Faster Diagnosis Standard](https://www.england.nhs.uk/statistics/statistical-work-areas/cancer-waiting-times/) (target: 75%, rising to 80% by March 2026)
+- [Diagnostic 6-week wait / DM01](https://www.england.nhs.uk/statistics/statistical-work-areas/diagnostics-waiting-times-and-activity/monthly-diagnostics-waiting-times-and-activity/) (target: ≥99% within 42 days)
+
+**Quality and outcome measures**
+
+- [30-day emergency readmission rate](https://digital.nhs.uk/data-and-information/publications/statistical/compendium-emergency-readmissions/current) (benchmark: 12–14%)
+- [In-hospital mortality rate — SHMI](https://digital.nhs.uk/data-and-information/publications/statistical/shmi) (context for SHMI / HSMR)
+- [Delayed Transfer of Care (DTOC) delay](https://www.england.nhs.uk/statistics/statistical-work-areas/delayed-transfers-of-care/) (discontinued Feb 2020; successor: [Discharge Delays](https://www.england.nhs.uk/statistics/statistical-work-areas/discharge-delays/acute-discharge-situation-report/))
+- [Friends and Family Test (FFT) recommendation rate](https://www.england.nhs.uk/fft/friends-and-family-test-data/)
+
+Note on the 4-hour standard: the data does not include an ED departure event, so time-to-assessment is used as a proxy.
+
+See [project/metric_definitions.md](project/metric_definitions.md) for full definitions, targets, and calculation details per metric.
 
 ## Use of AI
 
-I use LLMs every day. At work. At home. AI is integrated in my workflows and this project is no different. This is how I build these types of practice exercises. (Currently completed step 4.)
+I use LLMs every day. At work. At home. AI is integrated in my workflows and this project is no different. This is how I build these types of practice exercises. 
 
-1. I used Claude Code to build a configurable synthetic data generator. (Took eight months and many failed experiments)
+1. I used Claude Code to build Fabulexa; a configurable synthetic data generator. (Took eight months and many failed experiments)
 2. Used Claude to vet my idea for good practice exercises. Vague questions. Business scenarios. All on the same database. Hints. Etc.
 3. Back and forth with Claude until it understood exactly what I wanted.
-4. Let Claude generate the dataset, questions and queries.
+4. Let Claude generate the dataset with  questions and queries.
 5. Reviewed, analyzed, and iterated until I got exactly what I wanted.
 6. Hand edited the rest.
 
 ## What's Next
 
-More datasets. The synthetic data generator can produce healthcare, retail, SaaS, education -- any domain you can describe in YAML. More repos like this one are coming. And eventually, LLM-assisted tutoring that helps you through the exercises without just giving answers.
+More datasets. The synthetic data generator can produce healthcare, retail, SaaS, education -- any domain you can describe in YAML. More repos like this one are coming. 

@@ -60,7 +60,7 @@ The Medical Director is prepping for a board meeting and needs a headcount.
 <details>
 <summary>Solution</summary>
 
-`dim_patient` uses Type-2 SCD -- when a patient's tracked properties change (status, admission_count, total_spell_tariff), a new row is created. A naive `COUNT(*)` returns all historical rows instead of the real patient count.
+`dim_patient` uses Type-2 SCD -- when a patient's tracked properties change (status, admission_count, surgical_referred), a new row is created. A naive `COUNT(*)` returns all historical rows instead of the real patient count.
 
 **Using DISTINCT:**
 

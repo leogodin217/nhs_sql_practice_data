@@ -1,0 +1,626 @@
+# Data dictionary source of truth.
+#
+# Hand-curated prose (table descriptions, column descriptions, relationships).
+# Live statistics (row counts, null %, distinct counts, ranges, sample values)
+# are computed from the CSVs by scripts/gen_data_dictionary.py and merged in
+# at generation time.
+#
+# Groups control the section ordering on the index page.
+
+version: 1
+
+groups:
+  - Patient dimension
+  - Clinical dimensions
+  - A&E facts
+  - Inpatient facts
+  - Outpatient facts
+  - Surgical facts
+  - Cancer facts
+  - Diagnostics
+  - Other
+  - Pathway traces
+
+tables:
+
+  # ---------------------------------------------------------------
+  # Patient dimension
+  # ---------------------------------------------------------------
+
+  - name: dim_patient
+    group: Patient dimension
+    grain: One row per patient-version
+    primary_key: [id, valid_from]
+    description: |
+      Patient demographics, clinical flags, and tracked activity counters.
+      Uses Type-2 Slowly Changing Dimensions: a new row is written each time
+      a tracked attribute changes (for example `status`, `admission_count`, or
+      `surgical_referred`), with `valid_from` / `valid_to` bracketing the
+      version's lifetime. The current version of each patient has
+      `valid_to` IS NULL.
+    notes: |
+      A naive `COUNT(*)` returns historical versions, not patients. Use
+      `COUNT(DISTINCT id)` or filter to `valid_to IS NULL` for a current
+      snapshot. All fact tables reference `dim_patient.id` via `patient_id`.
+    columns:
+      - name: id
+        description: Synthetic patient identifier (e.g. `PAT_0000066`). Stable across SCD versions.
+      - name: name
+        description: Synthetic patient name. Not used analytically.
+      - name: person_gender_code
+        description: NHS Data Dictionary gender code (integer). 1 = male, 2 = female, 9 = not specified (typical NHS convention).
+      - name: ethnic_category
+        description: NHS ethnic category code (A–Z range).
+      - name: imd_decile
+        description: Index of Multiple Deprivation decile for the patient's lower-layer super output area. 1 = most deprived, 10 = least deprived.
+      - name: primary_condition
+        description: Broad clinical grouping that drives a patient's expected pathway (e.g. respiratory, cardiac, gastrointestinal).
+      - name: comorbidity_count
+        description: Count of significant comorbid conditions. Used in readmission and LOS stratification.
+      - name: frailty_score
+        description: Ordinal frailty score. Higher = frailer.
+      - name: gp_practice_code
+        description: Referring GP practice code.
+      - name: pathway_type
+        description: Dominant care pathway for the patient (elective, emergency, cancer, etc.).
+      - name: clinician_requirement
+        description: Clinician skill level required by the patient's primary condition. Currently constant at `consultant` in the data — the column exists for future grade variation.
+      - name: status
+        description: Patient lifecycle status (`active`, `admitted`, `discharged`, `deceased`). Changes drive new SCD rows.
+      - name: admission_count
+        description: Running count of inpatient admissions for the patient at the time the version was written.
+      - name: total_spell_tariff
+        description: Running sum of spell tariffs (£) across the patient's completed spells at the time the version was written. Currently 0.0 for every row — tariff accumulation isn't yet populated by the generator.
+      - name: surgical_referred
+        description: Whether the patient has ever been referred for surgery.
+      - name: cancer_referred
+        description: Whether the patient has ever been referred on a cancer pathway.
+      - name: valid_from
+        description: SCD-2 version start timestamp (inclusive).
+      - name: valid_to
+        description: SCD-2 version end timestamp (exclusive). NULL for the current version.
+      - name: active
+        description: Whether the patient is an active patient of the trust as of the version's valid window.
+
+  # ---------------------------------------------------------------
+  # Clinical dimensions
+  # ---------------------------------------------------------------
+
+  - name: dim_consultant
+    group: Clinical dimensions
+    grain: One row per consultant-version
+    primary_key: [id, valid_from]
+    description: |
+      Consultant workforce — 25 consultants spread across 5 specialty groups,
+      with grade, capacity, and quality attributes. SCD-2 capable but the
+      supplied data contains a single current version per consultant.
+    columns:
+      - {name: id,               description: "Synthetic consultant identifier (e.g. `CON_012`)."}
+      - {name: consultant_code,  description: "External consultant code used in NHS reporting."}
+      - {name: main_specialty,   description: "NHS main specialty code (integer, e.g. 110 = gastroenterology)."}
+      - {name: grade,            description: "Clinical grade: `consultant`, `registrar`, or `SHO`."}
+      - {name: quality_rating,   description: "Internal quality rating (0.0–1.0)."}
+      - {name: session_count,    description: "Contracted sessions per week."}
+      - {name: capacity_strain,  description: "Ratio of demand to capacity. Higher = more stretched."}
+      - {name: specialty_group,  description: "Broad specialty grouping: `cardiac`, `respiratory`, `gastrointestinal`, `general`, `musculoskeletal`."}
+      - {name: valid_from,       description: "SCD-2 version start timestamp."}
+      - {name: valid_to,         description: "SCD-2 version end. Empty string for the current version."}
+
+  - name: dim_ward
+    group: Clinical dimensions
+    grain: One row per ward-version
+    primary_key: [id, valid_from]
+    description: |
+      Hospital wards with capacity, department, and bed-day cost. 10 wards
+      totalling 75 beds across two sites.
+    columns:
+      - {name: id,                description: "Synthetic ward identifier (e.g. `WARD_001`)."}
+      - {name: ward_name,         description: "Human-readable ward name (e.g. `Jenner Ward`, `High Dependency Unit`)."}
+      - {name: ward_type,         description: "Operational type: `general`, `assessment`, `step_down`, `icu_hdu`, `maternity`, `paediatric`."}
+      - {name: department,        description: "Owning department: `medicine`, `surgery`, `critical_care`, `women_children`."}
+      - {name: site_code,         description: "Hospital site code (`RXH01` or `RXH02`)."}
+      - {name: total_beds,        description: "Number of beds on the ward."}
+      - {name: cost_per_bed_day,  description: "Daily cost per occupied bed (£). Used for spell cost analysis."}
+      - {name: valid_from,        description: "SCD-2 version start timestamp."}
+      - {name: valid_to,          description: "SCD-2 version end. Empty string for the current version."}
+
+  - name: dim_procedure
+    group: Clinical dimensions
+    grain: One row per procedure type
+    primary_key: [id, valid_from]
+    description: |
+      Surgical procedure catalogue with OPCS-4 clinical codes, HRG payment
+      codes, complexity tier, and tariff. Drives procedure cost and surgical
+      income analyses.
+    columns:
+      - {name: id,              description: "Synthetic procedure identifier (e.g. `PROC_011`)."}
+      - {name: procedure_name,  description: "Procedure name (e.g. `Lung resection`, `Spinal decompression`)."}
+      - {name: opcs4_code,      description: "OPCS-4.10 clinical procedure code."}
+      - {name: hrg_code,        description: "Healthcare Resource Group code that drives NHS payment."}
+      - {name: tariff,          description: "Payment tariff (£) per case."}
+      - {name: complexity,      description: "Complexity tier: `minor`, `moderate`, `major`, `complex`."}
+      - {name: specialty_group, description: "Specialty that typically performs the procedure."}
+      - {name: valid_from,      description: "SCD-2 version start timestamp."}
+      - {name: valid_to,        description: "SCD-2 version end. Empty string for the current version."}
+
+  - name: dim_medication
+    group: Clinical dimensions
+    grain: One row per medication type
+    primary_key: [id, valid_from]
+    description: |
+      Medication catalogue keyed by synthetic medication ID, categorised using
+      the British National Formulary (BNF) hierarchy.
+    columns:
+      - {name: id,              description: "Synthetic medication identifier (e.g. `MED_011`)."}
+      - {name: medication_name, description: "Drug name (e.g. `Amiodarone`, `Enoxaparin`)."}
+      - {name: bnf_category,    description: "BNF chapter/section label (e.g. `4.8.1 Control of epilepsy`)."}
+      - {name: route,           description: "Administration route: `oral`, `iv`, `inhaled`, `sc`."}
+      - {name: daily_cost,      description: "Daily medication cost (£) at the standard dose."}
+      - {name: specialty_group, description: "Specialty most likely to prescribe the medication."}
+      - {name: valid_from,      description: "SCD-2 version start timestamp."}
+      - {name: valid_to,        description: "SCD-2 version end. Empty string for the current version."}
+
+  - name: dim_diagnostic
+    group: Clinical dimensions
+    grain: One row per diagnostic test type
+    primary_key: [id, valid_from]
+    description: |
+      Diagnostic test catalogue (imaging, pathology, cardiology) with cost
+      and expected turnaround. Used with DM01 6-week wait analysis.
+    columns:
+      - {name: id,              description: "Synthetic diagnostic test identifier (e.g. `DIAG_004`)."}
+      - {name: test_name,       description: "Test name (e.g. `Ultrasound`, `Full Blood Count`, `MRI Scan`)."}
+      - {name: test_type,       description: "Modality: `blood`, `pathology`, `xray`, `ct`, `mri`, `ultrasound`, `cardiology`, `other`."}
+      - {name: cost,            description: "Unit cost per test (£)."}
+      - {name: turnaround_days, description: "Expected days from order to result."}
+      - {name: valid_from,      description: "SCD-2 version start timestamp."}
+      - {name: valid_to,        description: "SCD-2 version end. Empty string for the current version."}
+
+  - name: dim_theatre
+    group: Clinical dimensions
+    grain: One row per operating theatre
+    primary_key: [id, valid_from]
+    description: |
+      Operating theatres and their scheduling capacity. 5 theatres covering
+      general surgery, cardiac, orthopaedic, and obstetric use.
+    columns:
+      - {name: id,               description: "Synthetic theatre identifier (e.g. `THTR_001`)."}
+      - {name: theatre_name,     description: "Theatre name (e.g. `Cardiac Theatre`, `Main Theatre 2`)."}
+      - {name: specialty,        description: "Primary specialty served by the theatre."}
+      - {name: sessions_per_day, description: "Scheduled surgical sessions per operational day (2–4)."}
+      - {name: valid_from,       description: "SCD-2 version start timestamp."}
+      - {name: valid_to,         description: "SCD-2 version end. Empty string for the current version."}
+
+  # ---------------------------------------------------------------
+  # A&E facts
+  # ---------------------------------------------------------------
+
+  - name: fact_ed_arrival
+    group: A&E facts
+    grain: One row per ED arrival event
+    description: |
+      Emergency Department arrival events. The first event in an A&E
+      attendance — records when a patient presents at A&E and is registered.
+      Subsequent events in the same attendance (triage, clinical assessment)
+      share the `attendance_id`.
+
+      The dataset does not include an ED departure event. Time-to-assessment
+      (via `fact_ed_assessment.wait_minutes`) is the closest usable proxy for
+      the NHS 4-hour A&E standard, which officially measures arrival-to-
+      departure.
+    notes: |
+      `attendance_id` is the grain that links `fact_ed_arrival`, `fact_triage`,
+      and `fact_ed_assessment`. Not every attendance becomes an inpatient
+      spell: roughly 1,100 ED patients per year are treated and sent home
+      without generating a `spell_id`.
+    columns:
+      - name: decision_id
+        description: Synthetic monotonic event identifier across all fact tables. Useful for ordering events.
+      - name: timestamp
+        description: Event timestamp. Day-of-week shows the classic Monday-peak pattern in A&E.
+      - name: event_sequence
+        description: Per-patient event sequence counter.
+      - name: patient_id
+        description: Patient identifier.
+        references: dim_patient.id
+      - name: consultant_id
+        description: Consultant who registered the arrival (typically the receiving clinician).
+        references: dim_consultant.id
+      - name: attendance_id
+        description: Attendance identifier unique to this A&E visit. Links arrival, triage, and assessment rows for the same attendance.
+      - name: state
+        description: State label. Constant `arrival` in current data.
+
+  - name: fact_triage
+    group: A&E facts
+    grain: One row per triage event
+    description: |
+      Triage assessment event within an A&E attendance. Carries the
+      Manchester-style triage category (1–5) that drives clinical priority.
+    columns:
+      - {name: decision_id,     description: "Synthetic event identifier."}
+      - {name: timestamp,       description: "Triage event timestamp."}
+      - {name: triage_category, description: "Triage category 1 (immediate / resuscitation) through 5 (non-urgent)."}
+      - {name: event_sequence,  description: "Per-patient event sequence counter."}
+      - {name: patient_id,      description: "Patient identifier.", references: dim_patient.id}
+      - {name: consultant_id,   description: "Clinician performing triage.", references: dim_consultant.id}
+      - {name: attendance_id,   description: "A&E attendance identifier. Matches the arrival row in `fact_ed_arrival`."}
+      - {name: state,           description: "State label. Constant `triage` in current data."}
+
+  - name: fact_ed_assessment
+    group: A&E facts
+    grain: One row per clinical assessment in A&E
+    description: |
+      Clinical assessment event, performed after triage. Carries
+      `wait_minutes` — the elapsed time from arrival to this assessment — used
+      as the operational proxy for the 4-hour A&E standard.
+    columns:
+      - {name: decision_id,    description: "Synthetic event identifier."}
+      - {name: timestamp,      description: "Assessment event timestamp."}
+      - {name: wait_minutes,   description: "Minutes from arrival to clinical assessment. Proxy for the 4-hour standard (which officially measures arrival-to-departure)."}
+      - {name: event_sequence, description: "Per-patient event sequence counter."}
+      - {name: patient_id,     description: "Patient identifier.", references: dim_patient.id}
+      - {name: consultant_id,  description: "Assessing clinician.", references: dim_consultant.id}
+      - {name: attendance_id,  description: "A&E attendance identifier. Matches the arrival and triage rows."}
+      - {name: state,          description: "State label. Constant `assessment` in current data."}
+
+  # ---------------------------------------------------------------
+  # Inpatient facts
+  # ---------------------------------------------------------------
+
+  - name: fact_admission
+    group: Inpatient facts
+    grain: One or more rows per inpatient spell (events during admission)
+    description: |
+      Inpatient admission events. A `spell_id` can have multiple rows here,
+      capturing sub-events in the admission process. For length-of-stay work
+      use the earliest `timestamp` per `spell_id` as the admission time.
+    notes: |
+      A `spell_id` in `fact_admission` is always also present in
+      `fact_discharge` once the spell has ended. Spells without a matching
+      discharge are in-progress at the reporting cutoff.
+    columns:
+      - name: decision_id
+        description: Synthetic event identifier.
+      - name: timestamp
+        description: Event timestamp. Use `MIN(timestamp)` per `spell_id` to get the admission time.
+      - name: event_sequence
+        description: Per-patient event sequence counter.
+      - name: patient_id
+        description: Patient identifier.
+        references: dim_patient.id
+      - name: consultant_id
+        description: Admitting consultant.
+        references: dim_consultant.id
+      - name: spell_id
+        description: Inpatient spell identifier. Links admission, ward assignments, medication, ICU care, and discharge for the same stay.
+      - name: state
+        description: State label for the event.
+
+  - name: fact_ward_assignment
+    group: Inpatient facts
+    grain: One row per ward/bed assignment within a spell
+    description: |
+      Ward and bed assignments during a spell. A spell can have multiple
+      rows as patients transfer between wards or beds.
+    columns:
+      - {name: decision_id,    description: "Synthetic event identifier."}
+      - {name: timestamp,      description: "Time the patient was assigned to this ward/bed."}
+      - {name: bed_number,     description: "Bed number within the ward (1–30)."}
+      - {name: event_sequence, description: "Per-patient event sequence counter."}
+      - {name: patient_id,     description: "Patient identifier.", references: dim_patient.id}
+      - {name: ward_id,        description: "Ward the patient was assigned to.", references: dim_ward.id}
+      - {name: spell_id,       description: "Inpatient spell identifier. Matches `fact_admission`."}
+      - {name: state,          description: "State label. Constant `admission_ward` in current data."}
+
+  - name: fact_medication_administered
+    group: Inpatient facts
+    grain: One row per medication administration event
+    description: |
+      Medication administration events during an inpatient spell. One row per
+      dose given, linked to the medication catalogue via `medication_id`.
+    columns:
+      - {name: decision_id,    description: "Synthetic event identifier."}
+      - {name: timestamp,      description: "Time the dose was administered."}
+      - {name: event_sequence, description: "Per-patient event sequence counter."}
+      - {name: patient_id,     description: "Patient identifier.", references: dim_patient.id}
+      - {name: medication_id,  description: "Medication administered.", references: dim_medication.id}
+      - {name: spell_id,       description: "Inpatient spell during which the dose was given."}
+      - {name: state,          description: "State label. Constant `specialty_care` in current data."}
+
+  - name: fact_icu_care
+    group: Inpatient facts
+    grain: One row per ICU/HDU escalation event
+    description: |
+      ICU / HDU escalation events during an inpatient spell. Marks a transfer
+      into critical care for patients who deteriorate on a general ward.
+    columns:
+      - {name: decision_id,    description: "Synthetic event identifier."}
+      - {name: timestamp,      description: "Time of escalation to critical care."}
+      - {name: event_sequence, description: "Per-patient event sequence counter."}
+      - {name: patient_id,     description: "Patient identifier.", references: dim_patient.id}
+      - {name: ward_id,        description: "Critical care or HDU ward.", references: dim_ward.id}
+      - {name: spell_id,       description: "Inpatient spell during which the escalation occurred."}
+      - {name: state,          description: "State label. Constant `icu_hdu` in current data."}
+
+  - name: fact_discharge
+    group: Inpatient facts
+    grain: One or more rows per completed inpatient spell
+    description: |
+      Inpatient discharge events. Records the end of an inpatient spell —
+      patient discharged home, to another provider, or deceased. The earliest
+      `timestamp` per `spell_id` is the discharge time.
+    notes: |
+      This is *not* an A&E departure record. `spell_id`s are shared with
+      `fact_admission` and only exist once a patient has been admitted as an
+      inpatient. Length-of-stay = `MIN(discharge.timestamp)` −
+      `MIN(admission.timestamp)` grouped by `spell_id`.
+    columns:
+      - name: decision_id
+        description: Synthetic event identifier.
+      - name: timestamp
+        description: Discharge event timestamp. Use `MIN(timestamp)` per `spell_id` for the discharge time.
+      - name: event_sequence
+        description: Per-patient event sequence counter.
+      - name: patient_id
+        description: Patient identifier.
+        references: dim_patient.id
+      - name: consultant_id
+        description: Discharging consultant.
+        references: dim_consultant.id
+      - name: spell_id
+        description: Inpatient spell identifier. Always matches a `spell_id` in `fact_admission`.
+      - name: state
+        description: Discharge state (`discharged` in current data).
+
+  - name: fact_dtoc_assessment
+    group: Inpatient facts
+    grain: One row per delayed-transfer-of-care assessment
+    description: |
+      Delayed Transfer of Care (DTOC) assessments. Marks the moment a patient
+      is declared medically fit for discharge. The gap between this timestamp
+      and the matching `fact_discharge.timestamp` is the DTOC delay — time
+      the patient occupies an acute bed waiting for community or social-care
+      provision.
+    columns:
+      - {name: decision_id,    description: "Synthetic event identifier."}
+      - {name: timestamp,      description: "Time the patient was declared medically fit for discharge."}
+      - {name: event_sequence, description: "Per-patient event sequence counter."}
+      - {name: patient_id,     description: "Patient identifier.", references: dim_patient.id}
+      - {name: ward_id,        description: "Ward the patient is in at the time of assessment.", references: dim_ward.id}
+      - {name: spell_id,       description: "Inpatient spell. Matches `fact_admission` / `fact_discharge`."}
+      - {name: state,          description: "State label. Constant `medically_fit` in current data."}
+
+  # ---------------------------------------------------------------
+  # Outpatient facts
+  # ---------------------------------------------------------------
+
+  - name: fact_referral_created
+    group: Outpatient facts
+    grain: One row per outpatient referral
+    description: |
+      Outpatient referrals received by the trust — typically from a GP. First
+      event on a referral-to-treatment pathway, keyed by `pathway_id`.
+    columns:
+      - {name: decision_id,    description: "Synthetic event identifier."}
+      - {name: timestamp,      description: "Time the referral was received."}
+      - {name: event_sequence, description: "Per-patient event sequence counter."}
+      - {name: patient_id,     description: "Patient identifier.", references: dim_patient.id}
+      - {name: consultant_id,  description: "Consultant the referral is addressed to.", references: dim_consultant.id}
+      - {name: pathway_id,     description: "Outpatient pathway identifier. Unique per referral, shared with subsequent appointments in `fact_appointment_attended`."}
+      - {name: state,          description: "State label. Constant `referral_received` in current data."}
+
+  - name: fact_appointment_attended
+    group: Outpatient facts
+    grain: One row per attended outpatient appointment
+    description: |
+      Attended outpatient appointments. Linked to the originating referral
+      via `pathway_id`. A single pathway can have multiple attended
+      appointments (review, follow-up, etc.).
+    columns:
+      - {name: decision_id,    description: "Synthetic event identifier."}
+      - {name: timestamp,      description: "Appointment attendance time."}
+      - {name: event_sequence, description: "Per-patient event sequence counter."}
+      - {name: patient_id,     description: "Patient identifier.", references: dim_patient.id}
+      - {name: consultant_id,  description: "Consultant who saw the patient.", references: dim_consultant.id}
+      - {name: pathway_id,     description: "Outpatient pathway identifier. Matches `fact_referral_created`."}
+      - {name: state,          description: "State label. Constant `attended` in current data."}
+
+  # ---------------------------------------------------------------
+  # Surgical facts
+  # ---------------------------------------------------------------
+
+  - name: fact_pre_op_assessment
+    group: Surgical facts
+    grain: One row per pre-operative assessment
+    description: |
+      Pre-operative assessment. First event on a surgical episode — links the
+      patient to the planned procedure and opens the `surgical_episode_id`
+      that joins the later surgeon-assignment and surgery-performed events.
+    columns:
+      - {name: decision_id,         description: "Synthetic event identifier."}
+      - {name: timestamp,           description: "Pre-op assessment time."}
+      - {name: event_sequence,      description: "Per-patient event sequence counter."}
+      - {name: patient_id,          description: "Patient identifier.", references: dim_patient.id}
+      - {name: procedure_id,        description: "Planned procedure.", references: dim_procedure.id}
+      - {name: surgical_episode_id, description: "Surgical episode identifier. Links pre-op, surgeon assignment, and surgery performed."}
+      - {name: state,               description: "State label. Constant `pre_op_procedure` in current data."}
+
+  - name: fact_surgeon_assigned
+    group: Surgical facts
+    grain: One row per surgeon assignment event
+    description: |
+      Surgeon assignment to a surgical episode, after the pre-op assessment.
+      Only consultants of surgical grade appear as the assigned consultant.
+    columns:
+      - {name: decision_id,         description: "Synthetic event identifier."}
+      - {name: timestamp,           description: "Time the surgeon was assigned."}
+      - {name: event_sequence,      description: "Per-patient event sequence counter."}
+      - {name: patient_id,          description: "Patient identifier.", references: dim_patient.id}
+      - {name: consultant_id,       description: "Assigned surgeon.", references: dim_consultant.id}
+      - {name: surgical_episode_id, description: "Surgical episode identifier. Matches the pre-op assessment row."}
+      - {name: state,               description: "State label. Constant `pre_op_surgeon` in current data."}
+
+  - name: fact_surgery_performed
+    group: Surgical facts
+    grain: One row per completed surgery
+    description: |
+      Completed surgery event. Carries the theatre it was performed in. Use
+      with `fact_pre_op_assessment` (via `surgical_episode_id`) to recover
+      the procedure and its tariff for surgical-income analyses.
+    columns:
+      - {name: decision_id,         description: "Synthetic event identifier."}
+      - {name: timestamp,           description: "Time the surgery completed."}
+      - {name: event_sequence,      description: "Per-patient event sequence counter."}
+      - {name: patient_id,          description: "Patient identifier.", references: dim_patient.id}
+      - {name: theatre_id,          description: "Theatre in which the surgery was performed.", references: dim_theatre.id}
+      - {name: surgical_episode_id, description: "Surgical episode identifier. Matches the pre-op assessment row."}
+      - {name: state,               description: "State label. Constant `surgery_performed` in current data."}
+
+  # ---------------------------------------------------------------
+  # Cancer facts
+  # ---------------------------------------------------------------
+
+  - name: fact_cancer_referral
+    group: Cancer facts
+    grain: One row per cancer referral
+    description: |
+      Cancer pathway referral. Start of the 28-day Faster Diagnosis Standard
+      (FDS) clock. Paired with `fact_cancer_first_seen` via
+      `cancer_pathway_id` to measure days from referral to first consultant
+      appointment.
+    columns:
+      - {name: decision_id,       description: "Synthetic event identifier."}
+      - {name: timestamp,         description: "Time the cancer referral was received. FDS clock start."}
+      - {name: event_sequence,    description: "Per-patient event sequence counter."}
+      - {name: patient_id,        description: "Patient identifier.", references: dim_patient.id}
+      - {name: consultant_id,     description: "Receiving consultant.", references: dim_consultant.id}
+      - {name: cancer_pathway_id, description: "Cancer pathway identifier. Matches `fact_cancer_first_seen`."}
+      - {name: state,             description: "State label. Constant `referral_received` in current data."}
+
+  - name: fact_cancer_first_seen
+    group: Cancer facts
+    grain: One row per first consultant appointment on a cancer pathway
+    description: |
+      First consultant appointment on a cancer pathway. FDS clock stop event.
+      Not every referral has a first-seen row within the reporting window —
+      right-censored cases remain open at the cutoff.
+    columns:
+      - {name: decision_id,       description: "Synthetic event identifier."}
+      - {name: timestamp,         description: "Time of the first appointment. FDS clock stop."}
+      - {name: event_sequence,    description: "Per-patient event sequence counter."}
+      - {name: patient_id,        description: "Patient identifier.", references: dim_patient.id}
+      - {name: consultant_id,     description: "Consultant who saw the patient.", references: dim_consultant.id}
+      - {name: cancer_pathway_id, description: "Cancer pathway identifier. Matches `fact_cancer_referral`."}
+      - {name: state,             description: "State label. Constant `first_seen` in current data."}
+
+  # ---------------------------------------------------------------
+  # Diagnostics
+  # ---------------------------------------------------------------
+
+  - name: fact_diagnostic_ordered
+    group: Diagnostics
+    grain: One row per diagnostic test order
+    description: |
+      Diagnostic test order event. Paired with `fact_diagnostic_performed`
+      via `request_id` to measure turnaround and DM01 6-week compliance.
+    columns:
+      - {name: decision_id,    description: "Synthetic event identifier."}
+      - {name: timestamp,      description: "Order time. DM01 clock start."}
+      - {name: event_sequence, description: "Per-patient event sequence counter."}
+      - {name: patient_id,     description: "Patient identifier.", references: dim_patient.id}
+      - {name: diagnostic_id,  description: "Test ordered.", references: dim_diagnostic.id}
+      - {name: request_id,     description: "Request identifier. Matches the performed row."}
+      - {name: state,          description: "State label. Constant `ordered` in current data."}
+
+  - name: fact_diagnostic_performed
+    group: Diagnostics
+    grain: One row per completed diagnostic test
+    description: |
+      Completed diagnostic test event. Match to `fact_diagnostic_ordered` on
+      `request_id` to compute time-to-test. Not every order has a matching
+      performed row within the window — right-censored cases remain open.
+    columns:
+      - {name: decision_id,    description: "Synthetic event identifier."}
+      - {name: timestamp,      description: "Time the test was performed. DM01 clock stop."}
+      - {name: event_sequence, description: "Per-patient event sequence counter."}
+      - {name: patient_id,     description: "Patient identifier.", references: dim_patient.id}
+      - {name: diagnostic_id,  description: "Test performed.", references: dim_diagnostic.id}
+      - {name: request_id,     description: "Request identifier. Matches `fact_diagnostic_ordered`."}
+      - {name: state,          description: "State label. Constant `performed` in current data."}
+
+  # ---------------------------------------------------------------
+  # Other
+  # ---------------------------------------------------------------
+
+  - name: fact_fft_response
+    group: Other
+    grain: One row per Friends and Family Test response
+    description: |
+      Friends and Family Test survey responses. Each row is a single
+      patient's rating on the standard NHS FFT 1–5 recommendation scale.
+    columns:
+      - {name: decision_id,          description: "Synthetic event identifier."}
+      - {name: timestamp,            description: "Time the response was submitted."}
+      - {name: recommendation_score, description: "NHS FFT score (1–5). Convention varies by survey; check the distribution before interpreting direction."}
+      - {name: event_sequence,       description: "Per-patient event sequence counter."}
+      - {name: patient_id,           description: "Patient identifier.", references: dim_patient.id}
+      - {name: consultant_id,        description: "Consultant associated with the care episode being rated.", references: dim_consultant.id}
+      - {name: survey_id,            description: "Survey response identifier."}
+      - {name: state,                description: "State label. Constant `responded` in current data."}
+
+  - name: fact_safety_incident
+    group: Other
+    grain: One row per reported safety incident
+    description: |
+      Patient safety incidents reported on a ward during a spell. Low-volume
+      table, useful for incident-rate analyses against ward-days.
+    columns:
+      - {name: decision_id,    description: "Synthetic event identifier."}
+      - {name: timestamp,      description: "Time the incident was reported."}
+      - {name: event_sequence, description: "Per-patient event sequence counter."}
+      - {name: patient_id,     description: "Patient involved in the incident.", references: dim_patient.id}
+      - {name: ward_id,        description: "Ward on which the incident occurred.", references: dim_ward.id}
+      - {name: spell_id,       description: "Inpatient spell during which the incident occurred."}
+      - {name: state,          description: "State label. Constant `incident` in current data."}
+
+  - name: fact_death_record
+    group: Other
+    grain: One row per in-hospital death
+    description: |
+      In-hospital death record. Linked to the spell the patient was in at
+      time of death. Used for crude mortality rate and HSMR context.
+    columns:
+      - {name: decision_id,    description: "Synthetic event identifier."}
+      - {name: timestamp,      description: "Time of death."}
+      - {name: event_sequence, description: "Per-patient event sequence counter."}
+      - {name: patient_id,     description: "Deceased patient.", references: dim_patient.id}
+      - {name: consultant_id,  description: "Consultant of record at time of death.", references: dim_consultant.id}
+      - {name: spell_id,       description: "Inpatient spell during which the death occurred."}
+      - {name: state,          description: "State label. Constant `deceased` in current data."}
+
+  # ---------------------------------------------------------------
+  # Pathway traces
+  # ---------------------------------------------------------------
+
+  - name: fact_journey_states
+    group: Pathway traces
+    grain: One row per journey-state transition
+    description: |
+      State-by-state trace of every patient journey — every intermediate
+      state the simulator emits as a patient moves through A&E, inpatient,
+      outpatient, surgical, cancer, and diagnostic pathways. Shipped as a
+      CSV in the repo but not loaded into the default DuckDB build.
+    notes: |
+      Useful for advanced temporal analyses (time-in-state distributions,
+      bottleneck detection, Sankey-style flow diagrams) that need every
+      intermediate state rather than just the clock-start/clock-stop events
+      captured by the other fact tables.
+    columns:
+      - {name: actor_type,          description: "Entity whose journey is traced. Currently always `patient`."}
+      - {name: actor_id,            description: "Identifier of the acting entity (e.g. `PAT_0004273`)."}
+      - {name: journey_type,        description: "Journey type: `patient_intake`, `inpatient_spell`, `outpatient_pathway`, `cancer_pathway`, `surgical_pathway`, `diagnostic_request`, etc."}
+      - {name: journey_instance_id, description: "Instance identifier for this specific journey (matches `spell_id`, `pathway_id`, `attendance_id`, etc. in the corresponding fact table)."}
+      - {name: state,               description: "Named state within the journey (e.g. `assessment`, `icu_hdu`, `discharged_ed`)."}
+      - {name: entered_at,          description: "Time the entity entered this state."}
+      - {name: exited_at,           description: "Time the entity exited this state. NULL for the current (terminal) state."}
